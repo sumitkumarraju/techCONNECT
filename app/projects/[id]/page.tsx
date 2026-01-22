@@ -35,7 +35,6 @@ export default function ProjectEditor() {
   }, [id, token]);
 
   const initSocket = async () => {
-    await fetch('/api/socket'); // Ensure socket endpoint is hit (optional if using custom server directly)
     socket = io(); // Connects to the same host
 
     socket.on('connect', () => {

@@ -1,0 +1,42 @@
+
+> tech-connect@0.1.0 dev
+> nodemon server.js
+
+[33m[nodemon] 3.1.11[39m
+[33m[nodemon] to restart at any time, enter `rs`[39m
+[33m[nodemon] watching path(s): *.*[39m
+[33m[nodemon] watching extensions: js,mjs,cjs,json[39m
+[32m[nodemon] starting `node server.js`[39m
+> Ready on http://localhost:3000
+ ○ Compiling / ...
+ ✓ Compiled / in 6.9s (1344 modules)
+ GET / 200 in 7671ms
+ ○ Compiling /_not-found ...
+ ✓ Compiled /_not-found in 8.8s (1324 modules)
+ GET /linear.webp 404 in 8159ms
+ ✓ Compiled in 462ms (662 modules)
+ ✓ Compiled in 366ms (662 modules)
+[32m[nodemon] restarting due to changes...[39m
+[32m[nodemon] starting `node server.js`[39m
+ ⨯ uncaughtException: Error: listen EADDRINUSE: address already in use :::3000
+    at Server.setupListenHandle [as _listen2] (node:net:1940:16)
+    at listenInCluster (node:net:1997:12)
+    at Server.listen (node:net:2102:7)
+    at /app/server.js:37:14 {
+  code: 'EADDRINUSE',
+  errno: -98,
+  syscall: 'listen',
+  address: '::',
+  port: 3000
+}
+ ⨯ uncaughtException: Error: listen EADDRINUSE: address already in use :::3000
+    at Server.setupListenHandle [as _listen2] (node:net:1940:16)
+    at listenInCluster (node:net:1997:12)
+    at Server.listen (node:net:2102:7)
+    at /app/server.js:37:14 {
+  code: 'EADDRINUSE',
+  errno: -98,
+  syscall: 'listen',
+  address: '::',
+  port: 3000
+}
