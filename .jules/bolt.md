@@ -1,0 +1,3 @@
+## 2024-05-22 - Backend Architecture Discrepancy
+**Learning:** The codebase contains a split architecture: a vestigial Express backend (`backend/`) on port 5000 and an active Next.js App Router backend (`app/api/`) on port 3000. The frontend was incorrectly configured to point to the inactive Express backend via `lib/api.js`, and the Next.js API routes were using field names (`owner`, `collaborators`) inconsistent with the Mongoose schema (`ownerId`, `members`).
+**Action:** Always verify the "Source of Truth" for the backend by checking which server script is actually running (`npm run dev` -> `server.js` -> Next.js) and cross-reference API calls with database schemas before optimizing. Use relative URLs (`/api`) in Next.js to avoid port mismatches.

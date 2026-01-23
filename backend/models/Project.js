@@ -33,4 +33,8 @@ const projectSchema = new mongoose.Schema(
     }
 );
 
+// Indexes for My Projects dashboard
+projectSchema.index({ ownerId: 1 });
+projectSchema.index({ members: 1 });
+
 module.exports = mongoose.model("Project", projectSchema);

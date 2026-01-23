@@ -24,10 +24,10 @@ export async function GET(req: Request) {
 
     const projects = await Project.find({
         $or: [
-            { owner: user.userId },
-            { collaborators: user.userId }
+            { ownerId: user.userId },
+            { members: user.userId }
         ]
-    }).populate('owner', 'username').sort({ updatedAt: -1 });
+    }).populate('ownerId', 'username').sort({ updatedAt: -1 });
     return NextResponse.json(projects);
   } catch (error) {
     return NextResponse.json({ message: 'Server error' }, { status: 500 });
@@ -42,10 +42,10 @@ export async function POST(req: Request) {
 
     const { title, description } = await req.json();
     const project = await Project.create({
-      title,
+      name: title, // Map title to name as per schema
       description,
-      owner: user.userId,
-      collaborators: []
+      ownerId: user.userId,
+      members: [user.userId]
     });
 
     return NextResponse.json(project, { status: 201 });

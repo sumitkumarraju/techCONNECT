@@ -13,5 +13,8 @@ const ProjectSchema = new mongoose.Schema({
 
 // Optional index for Explore page queries
 ProjectSchema.index({ isPublic: 1, createdAt: -1 });
+// Indexes for My Projects dashboard
+ProjectSchema.index({ ownerId: 1 });
+ProjectSchema.index({ members: 1 });
 
 export default mongoose.models.Project || mongoose.model('Project', ProjectSchema);
