@@ -16,6 +16,14 @@ export const dynamic = 'force-dynamic';
 
 export async function GET() {
   await dbConnect();
+  // Seeding initial data if empty
+  const count = await Challenge.countDocuments();
+  if (count === 0) {
+    await Challenge.create([
+      { title: 'Array Manipulation Basics', description: 'Optimize a function to reverse an array in-place.', difficulty: 'Easy', category: 'Algorithms', solvers: 1204 },
+      { title: 'Load Balancer Logic', description: 'Design a round-robin distribution system.', difficulty: 'Hard', category: 'System Design', solvers: 342 }
+    ]);
+  }
 
   const challenges = await Challenge.find({});
   return NextResponse.json(challenges);

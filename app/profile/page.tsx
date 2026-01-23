@@ -12,8 +12,8 @@ export default function ProfilePage() {
     if (authUser) {
       // Use standard API util which handles token automatically
       API.get('/auth/me') // Or /api/profile if it exists, but usually we just load current user
-        .then(res => setProfile(res.data))
-        .catch(err => console.error(err));
+      .then(res => setProfile(res.data))
+      .catch(err => console.error(err));
     }
   }, [authUser]);
 

@@ -11,9 +11,7 @@ const ProjectSchema = new mongoose.Schema({
   techStack: [{ type: String }],
 }, { timestamps: true });
 
-// Optional index for Explore page queries and Dashboard optimization
+// Optional index for Explore page queries
 ProjectSchema.index({ isPublic: 1, createdAt: -1 });
-ProjectSchema.index({ ownerId: 1 });
-ProjectSchema.index({ members: 1 });
 
 export default mongoose.models.Project || mongoose.model('Project', ProjectSchema);

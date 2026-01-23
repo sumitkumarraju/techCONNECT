@@ -7,8 +7,7 @@
     "build": "next build",
     "start": "next start",
     "lint": "next lint",
-    "test": "jest",
-    "seed": "ts-node --compiler-options '{\"module\":\"commonjs\"}' scripts/seed-challenges.ts"
+    "test": "jest"
   },
   "dependencies": {
     "@monaco-editor/react": "^4.7.0",
