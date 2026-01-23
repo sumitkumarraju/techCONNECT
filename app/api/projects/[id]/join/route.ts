@@ -16,7 +16,7 @@ const getDataFromToken = (req: NextRequest) => {
     }
 }
 
-export async function POST(req: NextRequest) {
+export async function POST(req: NextRequest, { params }: { params: { id: string } }) {
     try {
         await connectDB();
         const userId = getDataFromToken(req);
@@ -24,17 +24,21 @@ export async function POST(req: NextRequest) {
             return NextResponse.json({ message: "Not authorized" }, { status: 401 });
         }
 
-        const body = await req.json();
-        const project = await Project.create({
-            name: body.name,
-            description: body.description,
-            ownerId: userId,
-            members: [userId],
-            isPublic: body.isPublic || false,
-            techStack: body.techStack || []
-        });
+        const project = await Project.findById(params.id);
 
-        return NextResponse.json(project, { status: 201 });
+        if (!project || !project.isPublic) {
+            return NextResponse.json({ message: "Project not found" }, { status: 404 });
+        }
+
+        const isMember = project.members.some((memberId: any) => memberId.toString() === userId);
+        if (isMember) {
+            return NextResponse.json({ message: "Already a member" }, { status: 400 });
+        }
+
+        project.members.push(userId);
+        await project.save();
+
+        return NextResponse.json({ message: "Joined project successfully" });
     } catch (error: any) {
         return NextResponse.json({ message: error.message }, { status: 500 });
     }

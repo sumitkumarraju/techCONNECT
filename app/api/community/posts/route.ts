@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import connectDB from '@/lib/db';
-import Project from '@/models/Project';
+import Post from '@/models/Post';
 import jwt from 'jsonwebtoken';
 
 export const dynamic = 'force-dynamic';
@@ -16,6 +16,18 @@ const getDataFromToken = (req: NextRequest) => {
     }
 }
 
+export async function GET(req: NextRequest) {
+    try {
+        await connectDB();
+        const posts = await Post.find()
+            .populate("authorId", "name username")
+            .sort({ createdAt: -1 });
+        return NextResponse.json(posts);
+    } catch (error: any) {
+        return NextResponse.json({ message: error.message }, { status: 500 });
+    }
+}
+
 export async function POST(req: NextRequest) {
     try {
         await connectDB();
@@ -25,16 +37,14 @@ export async function POST(req: NextRequest) {
         }
 
         const body = await req.json();
-        const project = await Project.create({
-            name: body.name,
-            description: body.description,
-            ownerId: userId,
-            members: [userId],
-            isPublic: body.isPublic || false,
-            techStack: body.techStack || []
+        const post = await Post.create({
+            authorId: userId,
+            title: body.title,
+            content: body.content,
+            tags: body.tags || []
         });
 
-        return NextResponse.json(project, { status: 201 });
+        return NextResponse.json(post, { status: 201 });
     } catch (error: any) {
         return NextResponse.json({ message: error.message }, { status: 500 });
     }

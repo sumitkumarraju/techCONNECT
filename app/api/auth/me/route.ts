@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import connectDB from '@/lib/db';
-import Project from '@/models/Project';
+import User from '@/models/User';
 import jwt from 'jsonwebtoken';
 
 export const dynamic = 'force-dynamic';
@@ -16,7 +16,7 @@ const getDataFromToken = (req: NextRequest) => {
     }
 }
 
-export async function POST(req: NextRequest) {
+export async function GET(req: NextRequest) {
     try {
         await connectDB();
         const userId = getDataFromToken(req);
@@ -24,17 +24,8 @@ export async function POST(req: NextRequest) {
             return NextResponse.json({ message: "Not authorized" }, { status: 401 });
         }
 
-        const body = await req.json();
-        const project = await Project.create({
-            name: body.name,
-            description: body.description,
-            ownerId: userId,
-            members: [userId],
-            isPublic: body.isPublic || false,
-            techStack: body.techStack || []
-        });
-
-        return NextResponse.json(project, { status: 201 });
+        const user = await User.findById(userId).select("-passwordHash");
+        return NextResponse.json(user);
     } catch (error: any) {
         return NextResponse.json({ message: error.message }, { status: 500 });
     }
