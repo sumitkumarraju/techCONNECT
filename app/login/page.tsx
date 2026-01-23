@@ -1,7 +1,7 @@
 "use client";
-import React, { useState } from "react";
-import { useAuth } from '@/context/AuthContext';
-import Link from 'next/link';
+import { LoaderOne } from '@/components/ui/Loader';
+import { useRouter } from 'next/navigation';
+import React, { useState } from 'react';
 
 export default function Login() {
   const [email, setEmail] = useState('');
@@ -9,9 +9,12 @@ export default function Login() {
   const [showPassword, setShowPassword] = useState(false);
   const { login } = useAuth();
   const [error, setError] = useState('');
+  const [isLoading, setIsLoading] = useState(false);
+  const router = useRouter();
 
   const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
+    setIsLoading(true);
     try {
       const res = await fetch('/api/auth/login', {
         method: 'POST',
@@ -20,11 +23,25 @@ export default function Login() {
       });
       const data = await res.json();
       if (!res.ok) throw new Error(data.message);
+
+      // Simulate network delay for the animation to be seen
+      await new Promise(resolve => setTimeout(resolve, 1500));
+
       login(data.token, data.user);
+      router.push('/workspace');
     } catch (err: any) {
       setError(err.message);
+      setIsLoading(false);
     }
   };
+
+  if (isLoading) {
+    return (
+      <div className="fixed inset-0 z-50 bg-[#0A0A23] flex items-center justify-center">
+        <LoaderOne />
+      </div>
+    );
+  }
 
   return (
     <div className="bg-jules-bg text-jules-primary font-mono antialiased h-screen flex flex-col relative overflow-hidden">

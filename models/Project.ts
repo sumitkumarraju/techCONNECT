@@ -1,15 +1,17 @@
 import mongoose from 'mongoose';
 
 const ProjectSchema = new mongoose.Schema({
-  title: { type: String, required: true },
+  name: { type: String, required: true },
   description: { type: String },
-  owner: { type: mongoose.Schema.Types.ObjectId, ref: 'User', required: true },
-  code: { type: String, default: '// Start coding here...' },
-  collaborators: [{ type: mongoose.Schema.Types.ObjectId, ref: 'User' }],
-  versionHistory: [{
-    code: String,
-    timestamp: { type: Date, default: Date.now }
-  }]
+
+  ownerId: { type: mongoose.Schema.Types.ObjectId, ref: 'User', required: true },
+  members: [{ type: mongoose.Schema.Types.ObjectId, ref: 'User' }],
+
+  isPublic: { type: Boolean, default: false },
+  techStack: [{ type: String }],
 }, { timestamps: true });
+
+// Optional index for Explore page queries
+ProjectSchema.index({ isPublic: 1, createdAt: -1 });
 
 export default mongoose.models.Project || mongoose.model('Project', ProjectSchema);

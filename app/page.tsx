@@ -31,9 +31,9 @@ export default function Home() {
             <span className="font-bold tracking-tight text-lg">TechConnect</span>
           </Link>
           <nav className="hidden md:flex items-center gap-8 font-bold text-sm">
-            <a href="#" className="hover:text-jules-accent transition-colors">Explore</a>
-            <a href="#" className="hover:text-jules-accent transition-colors">Challenges</a>
-            <a href="#" className="hover:text-jules-accent transition-colors">Community</a>
+            <Link href="/explore" className="hover:text-jules-accent transition-colors">Explore</Link>
+            <Link href="/challenges" className="hover:text-jules-accent transition-colors">Challenges</Link>
+            <Link href="/community" className="hover:text-jules-accent transition-colors">Community</Link>
           </nav>
           <div className="flex items-center gap-4">
             <Link href="/login" className="text-sm font-bold hover:text-jules-accent transition-colors">Log in</Link>
