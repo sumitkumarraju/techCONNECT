@@ -33,6 +33,33 @@ export async function POST(req: NextRequest) {
             isPublic: body.isPublic || false,
             techStack: body.techStack || []
         });
+    const projects = await Project.find({
+      $or: [
+        { ownerId: user.userId },
+        { members: user.userId }
+      ]
+    }).populate('ownerId', 'username').sort({ updatedAt: -1 });
+    return NextResponse.json(projects);
+  } catch (error) {
+    return NextResponse.json({ message: 'Server error' }, { status: 500 });
+  }
+}
+
+export async function POST(req: Request) {
+  try {
+    await dbConnect();
+    const user = getUserFromToken(req);
+    if (!user) return NextResponse.json({ message: 'Unauthorized' }, { status: 401 });
+
+    const { name, description, isPublic, techStack } = await req.json();
+    const project = await Project.create({
+      name,
+      description,
+      ownerId: user.userId,
+      members: [user.userId],
+      isPublic: isPublic || false,
+      techStack: techStack || []
+    });
 
         return NextResponse.json(project, { status: 201 });
     } catch (error: any) {

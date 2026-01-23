@@ -5,6 +5,10 @@ import bcrypt from 'bcryptjs';
 import jwt from 'jsonwebtoken';
 
 export const dynamic = 'force-dynamic';
+export async function POST(req: Request) {
+  try {
+    await dbConnect();
+    const { name, username, email, password } = await req.json();
 
 export async function POST(req: NextRequest) {
     try {
@@ -25,6 +29,13 @@ export async function POST(req: NextRequest) {
 
         const salt = await bcrypt.genSalt(10);
         const passwordHash = await bcrypt.hash(password, salt);
+    const hashedPassword = await bcrypt.hash(password, 10);
+    const user = await User.create({
+      name,
+      username,
+      email,
+      passwordHash: hashedPassword
+    });
 
         const user = await User.create({
             name,
