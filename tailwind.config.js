@@ -18,16 +18,15 @@ module.exports = {
     extend: {
       colors: {
         jules: {
-          bg: '#0e0e0e',
-          surface: '#1c1c1c',
-          surfaceHover: '#2a2a2a',
-          border: '#3c4043',
-          primary: '#e2e2e2',
-          accent: '#a8c7fa', // Google Blue
-          success: '#c4eed0', // Pale Green
-          warning: '#f8d8d8', // Pale Red/Pink
-          text: '#f1f3f4',
-          muted: '#9aa0a6'
+          bg: '#1D0245', // Deep Indigo
+          surface: '#2A0A55', // Slightly lighter indigo for cards
+          border: '#4B1E7A', // Border color
+          primary: '#F3EFFF', // Main text
+          accent: '#00D7FF', // Cyan
+          purple: '#7B2CBF',
+          pink: '#D0B9FF',
+          muted: '#9CA3AF',
+          error: '#FF6B6B'
         }
       },
       fontFamily: {
@@ -35,14 +34,15 @@ module.exports = {
         mono: ['JetBrains Mono', 'monospace'],
       },
       animation: {
-        'pulse-fast': 'pulse 1.5s cubic-bezier(0.4, 0, 0.6, 1) infinite',
-        'slide-up': 'slideUp 0.3s ease-out forwards',
+        'fade-in': 'fadeIn 0.4s ease-out forwards',
+        'slide-up': 'slideUp 0.4s ease-out forwards',
       },
       keyframes: {
-        slideUp: {
-          '0%': { transform: 'translateY(10px)', opacity: '0' },
-          '100%': { transform: 'translateY(0)', opacity: '1' },
-        }
+        fadeIn: { '0%': { opacity: 0 }, '100%': { opacity: 1 } },
+        slideUp: { '0%': { opacity: 0, transform: 'translateY(10px)' }, '100%': { opacity: 1, transform: 'translateY(0)' } }
+      },
+      backgroundImage: {
+        'hero-glow': 'radial-gradient(circle at 50% 50%, rgba(168, 199, 250, 0.08) 0%, rgba(14, 14, 14, 0) 50%)',
       }
     },
   },
