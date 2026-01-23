@@ -1,46 +1,37 @@
-const Task = require("../models/Task");
+import { Response } from 'express';
+import Task from '@/models/Task';
+import { AuthRequest } from '../middleware/auth';
 
-// @desc    Get tasks for a project
-// @route   GET /api/projects/:id/tasks
-// @access  Private
-exports.getTasks = async (req, res) => {
+export const getTasks = async (req: AuthRequest, res: Response) => {
     try {
+        if (!req.user) return res.status(401).json({ message: "Not authorized" });
         const tasks = await Task.find({ projectId: req.params.id })
             .sort({ createdAt: -1 });
-
         res.json(tasks);
-    } catch (error) {
+    } catch (error: any) {
         res.status(500).json({ message: error.message });
     }
 };
 
-// @desc    Create task
-// @route   POST /api/projects/:id/tasks
-// @access  Private
-exports.createTask = async (req, res) => {
+export const createTask = async (req: AuthRequest, res: Response) => {
     try {
+        if (!req.user) return res.status(401).json({ message: "Not authorized" });
         const task = await Task.create({
             projectId: req.params.id,
             title: req.body.title,
             createdBy: req.user.id
         });
-
         res.status(201).json(task);
-    } catch (error) {
+    } catch (error: any) {
         res.status(500).json({ message: error.message });
     }
 };
 
-// @desc    Update task
-// @route   PUT /api/tasks/:taskId
-// @access  Private
-exports.updateTask = async (req, res) => {
+export const updateTask = async (req: AuthRequest, res: Response) => {
     try {
+        if (!req.user) return res.status(401).json({ message: "Not authorized" });
         const task = await Task.findById(req.params.taskId);
-
-        if (!task) {
-            return res.status(404).json({ message: "Task not found" });
-        }
+        if (!task) return res.status(404).json({ message: "Task not found" });
 
         task.title = req.body.title || task.title;
         task.status = req.body.status || task.status;
@@ -48,25 +39,20 @@ exports.updateTask = async (req, res) => {
 
         await task.save();
         res.json(task);
-    } catch (error) {
+    } catch (error: any) {
         res.status(500).json({ message: error.message });
     }
 };
 
-// @desc    Delete task
-// @route   DELETE /api/tasks/:taskId
-// @access  Private
-exports.deleteTask = async (req, res) => {
+export const deleteTask = async (req: AuthRequest, res: Response) => {
     try {
+        if (!req.user) return res.status(401).json({ message: "Not authorized" });
         const task = await Task.findById(req.params.taskId);
-
-        if (!task) {
-            return res.status(404).json({ message: "Task not found" });
-        }
+        if (!task) return res.status(404).json({ message: "Task not found" });
 
         await task.deleteOne();
         res.json({ message: "Task deleted" });
-    } catch (error) {
+    } catch (error: any) {
         res.status(500).json({ message: error.message });
     }
 };

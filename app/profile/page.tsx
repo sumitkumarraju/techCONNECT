@@ -2,19 +2,20 @@
 import React, { useEffect, useState } from 'react';
 import { useAuth } from '@/context/AuthContext';
 
+import API from "@/lib/api";
+
 export default function ProfilePage() {
-  const { token, user: authUser } = useAuth();
+  const { user: authUser } = useAuth();
   const [profile, setProfile] = useState<any>(null);
 
   useEffect(() => {
-    if (token) {
-      fetch('/api/profile', {
-        headers: { Authorization: `Bearer ${token}` }
-      })
-      .then(res => res.json())
-      .then(data => setProfile(data));
+    if (authUser) {
+      // Use standard API util which handles token automatically
+      API.get('/auth/me') // Or /api/profile if it exists, but usually we just load current user
+      .then(res => setProfile(res.data))
+      .catch(err => console.error(err));
     }
-  }, [token]);
+  }, [authUser]);
 
   if (!profile) return <div className="p-10 text-white">Loading profile...</div>;
 

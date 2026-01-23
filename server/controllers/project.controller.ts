@@ -1,10 +1,12 @@
-const Project = require("../models/Project");
+import { Response } from 'express';
+import Project from '@/models/Project';
+import { AuthRequest } from '../middleware/auth';
 
 // @desc    Create new project
-// @route   POST /api/projects
-// @access  Private
-exports.createProject = async (req, res) => {
+export const createProject = async (req: AuthRequest, res: Response) => {
     try {
+        if (!req.user) return res.status(401).json({ message: "Not authorized" });
+
         const project = await Project.create({
             name: req.body.name,
             description: req.body.description,
@@ -15,31 +17,31 @@ exports.createProject = async (req, res) => {
         });
 
         res.status(201).json(project);
-    } catch (error) {
+    } catch (error: any) {
         res.status(500).json({ message: error.message });
     }
 };
 
 // @desc    Get projects of logged-in user
-// @route   GET /api/projects/my
-// @access  Private
-exports.getMyProjects = async (req, res) => {
+export const getMyProjects = async (req: AuthRequest, res: Response) => {
     try {
+        if (!req.user) return res.status(401).json({ message: "Not authorized" });
+
         const projects = await Project.find({
             members: req.user.id
         }).sort({ updatedAt: -1 });
 
         res.json(projects);
-    } catch (error) {
+    } catch (error: any) {
         res.status(500).json({ message: error.message });
     }
 };
 
 // @desc    Get project by ID
-// @route   GET /api/projects/:id
-// @access  Private
-exports.getProjectById = async (req, res) => {
+export const getProjectById = async (req: AuthRequest, res: Response) => {
     try {
+        if (!req.user) return res.status(401).json({ message: "Not authorized" });
+
         const project = await Project.findById(req.params.id);
 
         if (!project) {
@@ -47,28 +49,30 @@ exports.getProjectById = async (req, res) => {
         }
 
         // Check membership
-        if (!project.members.includes(req.user.id)) {
+        const isMember = project.members.some((memberId: any) => memberId.toString() === req.user!.id);
+        if (!isMember) {
             return res.status(403).json({ message: "Access denied" });
         }
 
         res.json(project);
-    } catch (error) {
+    } catch (error: any) {
         res.status(500).json({ message: error.message });
     }
 };
 
 // @desc    Join project
-// @route   POST /api/projects/:id/join
-// @access  Private
-exports.joinProject = async (req, res) => {
+export const joinProject = async (req: AuthRequest, res: Response) => {
     try {
+        if (!req.user) return res.status(401).json({ message: "Not authorized" });
+
         const project = await Project.findById(req.params.id);
 
         if (!project || !project.isPublic) {
             return res.status(404).json({ message: "Project not found" });
         }
 
-        if (project.members.includes(req.user.id)) {
+        const isMember = project.members.some((memberId: any) => memberId.toString() === req.user!.id);
+        if (isMember) {
             return res.status(400).json({ message: "Already a member" });
         }
 
@@ -76,16 +80,16 @@ exports.joinProject = async (req, res) => {
         await project.save();
 
         res.json({ message: "Joined project successfully" });
-    } catch (error) {
+    } catch (error: any) {
         res.status(500).json({ message: error.message });
     }
 };
 
 // @desc    Update project
-// @route   PUT /api/projects/:id
-// @access  Private (Owner only)
-exports.updateProject = async (req, res) => {
+export const updateProject = async (req: AuthRequest, res: Response) => {
     try {
+        if (!req.user) return res.status(401).json({ message: "Not authorized" });
+
         const project = await Project.findById(req.params.id);
 
         if (!project) {
@@ -98,21 +102,21 @@ exports.updateProject = async (req, res) => {
 
         project.name = req.body.name || project.name;
         project.description = req.body.description || project.description;
-        project.isPublic = req.body.isPublic ?? project.isPublic;
+        if (req.body.isPublic !== undefined) project.isPublic = req.body.isPublic;
         project.techStack = req.body.techStack || project.techStack;
 
         await project.save();
         res.json(project);
-    } catch (error) {
+    } catch (error: any) {
         res.status(500).json({ message: error.message });
     }
 };
 
 // @desc    Delete project
-// @route   DELETE /api/projects/:id
-// @access  Private (Owner only)
-exports.deleteProject = async (req, res) => {
+export const deleteProject = async (req: AuthRequest, res: Response) => {
     try {
+        if (!req.user) return res.status(401).json({ message: "Not authorized" });
+
         const project = await Project.findById(req.params.id);
 
         if (!project) {
@@ -125,7 +129,7 @@ exports.deleteProject = async (req, res) => {
 
         await project.deleteOne();
         res.json({ message: "Project deleted successfully" });
-    } catch (error) {
+    } catch (error: any) {
         res.status(500).json({ message: error.message });
     }
 };

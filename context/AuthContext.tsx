@@ -9,6 +9,9 @@ interface User {
   username: string;
   email: string;
   token?: string;
+  bio?: string;
+  skills?: string[];
+  role?: string;
 }
 
 interface AuthContextType {
