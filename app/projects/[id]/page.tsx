@@ -1,240 +1,350 @@
 "use client";
 
-import { useEffect, useState, useRef } from "react";
+import React, { useState, useEffect, useRef } from "react";
+import { useParams } from "next/navigation";
+import Link from "next/link";
+import { useAuth } from "@/context/AuthContext";
 import API from "@/lib/api";
 import socket from "@/lib/socket";
-import { useAuth } from "@/context/AuthContext";
-import { useParams } from "next/navigation";
 import CodeEditor from "@/components/CodeEditor";
-import OnlineUsers from "@/components/OnlineUsers";
 
-export default function ProjectPage({ params }: { params: { id: string } }) {
-  const { id: projectId } = params;
-  const { user } = useAuth();
-  const [tasks, setTasks] = useState([]);
-  const [messages, setMessages] = useState([]);
-  const [chatText, setChatText] = useState("");
-  const [taskTitle, setTaskTitle] = useState("");
-  const [project, setProject] = useState<any>(null);
-  const [onlineUsers, setOnlineUsers] = useState([]);
-  const [activeTab, setActiveTab] = useState<'tasks' | 'code'>('tasks');
-  const messagesEndRef = useRef<HTMLDivElement>(null);
+export default function ProjectPage() {
+    const { id: projectId } = useParams() as { id: string };
+    const { user } = useAuth();
 
-  const scrollToBottom = () => {
-    messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
-  };
+    // Data State
+    const [project, setProject] = useState<any>(null);
+    const [tasks, setTasks] = useState<any[]>([]);
+    const [messages, setMessages] = useState<any[]>([]);
+    const [onlineUsers, setOnlineUsers] = useState<any[]>([]);
 
-  useEffect(() => {
-    scrollToBottom();
-  }, [messages]);
+    // UI State
+    const [rightPanelTab, setRightPanelTab] = useState<"chat" | "tasks">("chat");
+    const [chatText, setChatText] = useState("");
+    const [taskTitle, setTaskTitle] = useState("");
+    const messagesEndRef = useRef<HTMLDivElement>(null);
 
-  useEffect(() => {
-    if (!user) return;
+    // Initial Data Fetch & Socket Setup
+    useEffect(() => {
+        if (!user || !projectId) return;
 
-    // Fetch Initial Data
-    API.get(`/projects/${projectId}`)
-      .then(res => setProject(res.data))
-      .catch(err => console.error(err));
+        // Fetch Data
+        const fetchData = async () => {
+            try {
+                const [projRes, tasksRes, msgsRes] = await Promise.all([
+                    API.get(`/projects/${projectId}`),
+                    API.get(`/projects/${projectId}/tasks`),
+                    API.get(`/projects/${projectId}/messages`)
+                ]);
+                setProject(projRes.data);
+                setTasks(tasksRes.data);
+                setMessages(msgsRes.data);
+            } catch (err) {
+                console.error("Failed to load project data", err);
+            }
+        };
+        fetchData();
 
-    API.get(`/projects/${projectId}/tasks`)
-      .then(res => setTasks(res.data))
-      .catch(err => console.error(err));
+        // Socket Connect
+        socket.connect();
+        socket.emit("join-project", {
+            projectId,
+            user: { username: user.username, name: user.name, _id: user._id }
+        });
 
-    API.get(`/projects/${projectId}/messages`)
-      .then(res => setMessages(res.data))
-      .catch(err => console.error(err));
+        // Event Listeners
+        const handleReceiveMessage = (message: any) => {
+            setMessages(prev => [...prev, message]);
+        };
 
-    // Socket Connection
-    socket.connect();
-    socket.emit("join-project", {
-      projectId,
-      user: { username: user.username, name: user.name, _id: user._id }
-    });
+        const handleOnlineUsers = (users: any[]) => {
+            // Deduplicate based on _id if needed, but socketId is unique source of truth for connection
+            setOnlineUsers(users);
+        };
 
-    // Listeners
-    socket.on("receive-message", (message) => {
-      setMessages(prev => [...prev, message]);
-    });
+        const handleTaskSync = (updatedTask: any) => {
+            setTasks(prev => {
+                const exists = prev.find(t => t._id === updatedTask._id);
+                if (exists) {
+                    return prev.map(t => t._id === updatedTask._id ? updatedTask : t);
+                }
+                return [updatedTask, ...prev];
+            });
+        };
 
-    socket.on("online-users", (users) => {
-      setOnlineUsers(users);
-    });
+        socket.on("receive-message", handleReceiveMessage);
+        socket.on("online-users", handleOnlineUsers);
+        socket.on("task-sync", handleTaskSync);
 
-    socket.on("task-sync", (updatedTask) => {
-      setTasks(prev => {
-        // Check if task exists, if so update it, else add it
-        const exists = prev.find((t: any) => t._id === updatedTask._id);
-        if (exists) {
-          return prev.map((t: any) => t._id === updatedTask._id ? updatedTask : t);
-        } else {
-          return [updatedTask, ...prev];
+        return () => {
+            socket.off("receive-message", handleReceiveMessage);
+            socket.off("online-users", handleOnlineUsers);
+            socket.off("task-sync", handleTaskSync);
+            socket.disconnect();
+        };
+    }, [projectId, user]);
+
+    // Auto-scroll chat
+    useEffect(() => {
+        messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
+    }, [messages, rightPanelTab]);
+
+    // Actions
+    const sendMessage = async () => {
+        if (!chatText.trim()) return;
+
+        // Optimistic UI update not strictly needed as socket is fast, but good practice
+        // We'll wait for socket/API for now to keep it simple and consistent
+
+        const content = chatText;
+        setChatText("");
+
+        try {
+            await API.post(`/projects/${projectId}/messages`, { content });
+            // Emit to others (the controller saves it too, but we need to broadcast)
+            // Actually, backend controller saves to DB.
+            // We should ideally have the backend emit 'receive-message' after saving.
+            // But current backend/server.ts listens to 'send-message' and broadcasts.
+            // So we do both: API to save, Socket to broadcast.
+            // Ideally: API saves -> emits event via server-side socket.
+            // But for now, we follow existing pattern: Client emits 'send-message'.
+
+            socket.emit("send-message", {
+                projectId,
+                message: {
+                    content,
+                    senderId: { _id: user._id, username: user.username, name: user.name },
+                    createdAt: new Date().toISOString()
+                }
+            });
+
+            // Add to own list manually since broadcast usually excludes sender (socket.to)
+            setMessages(prev => [...prev, {
+                content,
+                senderId: { _id: user._id, username: user.username, name: user.name },
+                createdAt: new Date().toISOString()
+            }]);
+
+        } catch (error) {
+            console.error("Failed to send message", error);
         }
-      });
-    });
-
-    return () => {
-      socket.off("receive-message");
-      socket.off("online-users");
-      socket.off("task-sync");
-      socket.disconnect();
-    };
-  }, [projectId, user]);
-
-  const sendMessage = async () => {
-    if (!chatText.trim()) return;
-
-    const payload = {
-      projectId,
-      message: {
-        content: chatText,
-        senderId: { _id: user._id, username: user.username, name: user.name }
-      }
     };
 
-    setMessages(prev => [...prev, { ...payload.message, createdAt: new Date().toISOString() }]);
-    setChatText("");
+    const createTask = async () => {
+        if (!taskTitle.trim()) return;
+        try {
+            const { data } = await API.post(`/projects/${projectId}/tasks`, { title: taskTitle });
+            setTasks(prev => [data, ...prev]);
+            setTaskTitle("");
+            socket.emit("task-updated", { projectId, task: data });
+        } catch (error) {
+            console.error(error);
+        }
+    };
 
-    try {
-      await API.post(`/projects/${projectId}/messages`, { content: payload.message.content });
-      socket.emit("send-message", payload);
-    } catch (error) {
-      console.error("Failed to send message", error);
-    }
-  };
+    const toggleTask = async (task: any) => {
+        const newStatus = task.status === 'done' ? 'todo' : 'done';
+        const updatedTask = { ...task, status: newStatus };
 
-  const createTask = async () => {
-    if (!taskTitle.trim()) return;
-    try {
-      const { data } = await API.post(`/projects/${projectId}/tasks`, { title: taskTitle });
-      setTasks([data, ...tasks]);
-      setTaskTitle("");
+        // Optimistic
+        setTasks(prev => prev.map(t => t._id === task._id ? updatedTask : t));
 
-      socket.emit("task-updated", { projectId, task: data });
-    } catch (error) {
-      console.error(error);
-    }
-  };
+        try {
+            const { data } = await API.put(`/tasks/${task._id}`, { status: newStatus });
+            socket.emit("task-updated", { projectId, task: data });
+        } catch (error) {
+            console.error("Failed to toggle task", error);
+            // Revert on fail?
+        }
+    };
 
-  const toggleTask = async (task: any) => {
-    const newStatus = task.status === 'done' ? 'todo' : 'done';
-    // Optimistic update
-    const updatedTask = { ...task, status: newStatus };
-    setTasks(prev => prev.map((t: any) => t._id === task._id ? updatedTask : t));
+    if (!user) return <div className="h-screen bg-[#0A0A23] flex items-center justify-center text-jules-primary">Loading...</div>;
 
-    try {
-      const { data } = await API.put(`/tasks/${task._id}`, { status: newStatus });
-      socket.emit("task-updated", { projectId, task: data });
-    } catch (error) {
-      console.error("Failed to toggle task", error);
-    }
-  };
+    return (
+        <div className="font-mono h-screen bg-[#0A0A23] text-jules-primary flex flex-col overflow-hidden selection:bg-jules-accent selection:text-jules-bg">
 
-  if (!user) return null;
-
-  return (
-    <div className="flex h-screen bg-[#09090b] text-white overflow-hidden">
-
-      {/* LEFT PANEL: Tasks & Code Switcher */}
-      <div className="flex-1 flex flex-col min-w-0 border-r border-[#27272a]">
-        <div className="h-14 border-b border-[#27272a] flex items-center justify-between px-6 bg-[#0c0c0e]">
-          <h1 className="font-bold text-lg truncate pr-4">{project?.name || 'Loading...'}</h1>
-          <div className="flex gap-2 bg-[#18181b] p-1 rounded-lg">
-            <button
-              onClick={() => setActiveTab('tasks')}
-              className={`px-4 py-1.5 text-xs font-bold rounded-md transition-all ${activeTab === 'tasks' ? 'bg-zinc-700 text-white shadow' : 'text-zinc-500 hover:text-zinc-300'}`}
-            >
-              Tasks
-            </button>
-            <button
-              onClick={() => setActiveTab('code')}
-              className={`px-4 py-1.5 text-xs font-bold rounded-md transition-all ${activeTab === 'code' ? 'bg-blue-600 text-white shadow' : 'text-zinc-500 hover:text-zinc-300'}`}
-            >
-              Code Editor <span className="text-[9px] bg-red-500 text-white px-1 rounded ml-1 animate-pulse">LIVE</span>
-            </button>
-          </div>
-        </div>
-
-        <div className="flex-1 overflow-hidden relative">
-          {activeTab === 'tasks' ? (
-            <div className="h-full p-6 overflow-y-auto">
-              <div className="max-w-2xl mx-auto">
-                <div className="flex gap-2 mb-8">
-                  <input
-                    value={taskTitle}
-                    onChange={(e) => setTaskTitle(e.target.value)}
-                    className="flex-1 bg-[#18181b] border border-[#27272a] rounded-xl px-4 py-3 text-sm focus:outline-none focus:border-blue-500 transition-colors"
-                    placeholder="Add a new task..."
-                    onKeyDown={(e) => e.key === 'Enter' && createTask()}
-                  />
-                  <button onClick={createTask} className="bg-blue-600 hover:bg-blue-500 px-6 rounded-xl text-sm font-bold transition-colors">
-                    Add
-                  </button>
-                </div>
-
-                <div className="space-y-3">
-                  {tasks.map((t: any) => (
-                    <div key={t._id} className="p-4 bg-[#18181b] rounded-xl border border-[#27272a] flex justify-between items-center group hover:border-zinc-700 transition-all">
-                      <div className="flex items-center gap-3">
-                        <button
-                          onClick={() => toggleTask(t)}
-                          className={`w-5 h-5 rounded border flex items-center justify-center transition-colors ${t.status === 'done' ? 'bg-emerald-500 border-emerald-500' : 'border-zinc-600 hover:border-zinc-500'}`}
-                        >
-                          {t.status === 'done' && <svg className="w-3.5 h-3.5 text-black" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="3" d="M5 13l4 4L19 7"></path></svg>}
-                        </button>
-                        <span className={`text-sm ${t.status === 'done' ? 'line-through text-zinc-500' : 'text-zinc-200'}`}>{t.title}</span>
-                      </div>
-                      <span className={`text-[10px] uppercase px-2 py-1 rounded font-bold ${t.status === 'done' ? 'bg-emerald-500/10 text-emerald-500' : 'bg-blue-500/10 text-blue-500'
-                        }`}>
-                        {t.status}
-                      </span>
+            {/* 🟣 TOP BAR */}
+            <header className="h-14 border-b border-jules-border/30 bg-[#120129] flex items-center justify-between px-4 shrink-0">
+                <div className="flex items-center gap-4">
+                    <Link href="/" className="flex items-center gap-2 group">
+                        <div className="w-6 h-6 bg-jules-primary flex items-center justify-center text-jules-bg font-bold text-xs rounded-none">&lt;/&gt;</div>
+                    </Link>
+                    <div className="flex flex-col">
+                        <h1 className="font-bold text-sm leading-tight">{project?.name || "Loading Project..."}</h1>
+                        <div className="text-[10px] text-jules-muted flex items-center gap-2">
+                            <span className="w-2 h-2 rounded-full bg-green-500"></span>
+                            {project?.isPublic ? "Public" : "Private"} • {onlineUsers.length} Online
+                        </div>
                     </div>
-                  ))}
-                  {tasks.length === 0 && <div className="text-center py-12 text-zinc-500">No tasks yet. Create one above!</div>}
                 </div>
-              </div>
-            </div>
-          ) : (
-            <div className="h-full p-4 bg-[#1e1e1e]">
-              <CodeEditor projectId={projectId} />
-            </div>
-          )}
-        </div>
-      </div>
 
-      {/* RIGHT PANEL: Chat & Online Users */}
-      <div className="w-80 flex flex-col border-l border-[#27272a] bg-[#0c0c0e]">
-        <div className="h-14 border-b border-[#27272a] flex items-center justify-between px-4 bg-[#0c0c0e]">
-          <span className="font-bold text-sm text-zinc-400">Team Chat</span>
-          <OnlineUsers users={onlineUsers} />
-        </div>
-
-        <div className="flex-1 overflow-y-auto p-4 space-y-4">
-          {messages.map((m: any, i) => {
-            const isMe = m.senderId?._id === user._id || m.senderId === user._id;
-            return (
-              <div key={i} className={`flex ${isMe ? 'justify-end' : 'justify-start'}`}>
-                <div className={`max-w-[85%] rounded-2xl px-4 py-2.5 text-sm ${isMe ? 'bg-blue-600 text-white rounded-br-none' : 'bg-[#18181b] border border-[#27272a] text-zinc-200 rounded-bl-none'
-                  }`}>
-                  {!isMe && <p className="text-[10px] text-zinc-500 mb-1 font-bold">{m.senderId?.username || 'User'}</p>}
-                  <p>{m.content}</p>
+                <div className="flex items-center gap-3">
+                    {/* Online Users Avatars */}
+                    <div className="flex -space-x-2 mr-4">
+                        {onlineUsers.slice(0, 5).map((u, i) => (
+                            <div key={i} className="w-8 h-8 rounded-full bg-jules-accent border-2 border-[#120129] flex items-center justify-center text-jules-bg font-bold text-xs z-20" title={u.username}>
+                                {u.username?.slice(0, 2).toUpperCase()}
+                            </div>
+                        ))}
+                         {onlineUsers.length > 5 && (
+                             <div className="w-8 h-8 rounded-full bg-jules-surface border-2 border-[#120129] flex items-center justify-center text-xs z-10">
+                                 +{onlineUsers.length - 5}
+                             </div>
+                         )}
+                    </div>
+                    <Link href="/dashboard" className="bg-jules-surface border border-jules-border text-jules-muted text-xs font-bold px-3 py-1.5 rounded hover:text-white transition-colors">
+                        Exit
+                    </Link>
                 </div>
-              </div>
-            );
-          })}
-          <div ref={messagesEndRef} />
-        </div>
+            </header>
 
-        <div className="p-4 border-t border-[#27272a] bg-[#09090b]">
-          <input
-            value={chatText}
-            onChange={(e) => setChatText(e.target.value)}
-            onKeyDown={(e) => e.key === 'Enter' && sendMessage()}
-            className="w-full bg-[#18181b] border border-[#27272a] rounded-xl px-4 py-2.5 text-sm focus:outline-none focus:border-blue-500 transition-colors placeholder-zinc-600"
-            placeholder="Type a message..."
-          />
-        </div>
-      </div>
+            {/* MAIN WORKSPACE AREA */}
+            <div className="flex-1 flex overflow-hidden">
 
-    </div>
-  );
+                {/* 📂 LEFT SIDEBAR - FILE EXPLORER */}
+                <aside className="w-64 border-r border-jules-border/30 bg-[#0E0E1E] flex flex-col shrink-0">
+                    <div className="p-3 border-b border-jules-border/30 text-xs font-bold text-jules-muted uppercase tracking-wider">
+                        Files
+                    </div>
+                    <div className="flex-1 overflow-y-auto p-2 text-sm text-jules-primary/80 space-y-1">
+                        <div className="flex items-center gap-2 px-2 py-1 bg-jules-primary/5 cursor-pointer">
+                            <span className="opacity-50">📂</span> src
+                        </div>
+                        <div className="pl-6 space-y-1">
+                            <div className="flex items-center gap-2 px-2 py-1 bg-jules-accent/10 text-jules-accent rounded font-bold">
+                                <span className="text-yellow-400">JS</span> main.js
+                            </div>
+                        </div>
+                        <div className="p-4 text-xs text-jules-muted italic text-center mt-4">
+                            Multi-file support coming soon
+                        </div>
+                    </div>
+
+                    {/* Members Panel */}
+                    <div className="p-3 border-t border-jules-border/30">
+                        <div className="text-xs font-bold text-jules-muted uppercase tracking-wider mb-3">Online Now</div>
+                        <div className="space-y-2">
+                            {onlineUsers.map((u, i) => (
+                                <div key={i} className="flex items-center gap-2 text-xs">
+                                    <span className="w-2 h-2 rounded-full bg-green-500"></span>
+                                    {u.name || u.username} {u._id === user._id && "(You)"}
+                                </div>
+                            ))}
+                        </div>
+                    </div>
+                </aside>
+
+                {/* 🧠 CENTER - CODE EDITOR */}
+                <main className="flex-1 flex flex-col min-w-0 bg-[#0A0A23] relative">
+                    {/* Tabs */}
+                    <div className="flex items-center bg-[#0E0E1E] border-b border-jules-border/30">
+                        <div className="px-4 py-2 text-xs font-bold bg-[#0A0A23] border-r border-[#0A0A23] text-jules-accent border-t-2 border-t-jules-accent flex items-center gap-2">
+                            <span className="text-yellow-400">JS</span> main.js
+                            <span className="ml-2 opacity-50 text-[10px]">Edited just now</span>
+                        </div>
+                    </div>
+
+                    {/* Editor Content */}
+                    <div className="flex-1 overflow-hidden relative">
+                         <CodeEditor projectId={projectId} />
+                    </div>
+
+                    {/* Editor Status Bar */}
+                    <div className="bg-[#1D0245] border-t border-jules-border/30 p-1 flex justify-between items-center text-[10px] text-jules-muted px-3">
+                        <div className="flex items-center gap-3">
+                            <span className="flex items-center gap-1"><span className="w-1.5 h-1.5 rounded-full bg-green-500"></span> Connected</span>
+                        </div>
+                        <div className="flex items-center gap-3">
+                            <span>JavaScript</span>
+                            <span>UTF-8</span>
+                        </div>
+                    </div>
+                </main>
+
+                {/* 💬 RIGHT SIDEBAR - CHAT / TASKS */}
+                <aside className="w-80 border-l border-jules-border/30 bg-[#0E0E1E] flex flex-col shrink-0">
+                    {/* Tabs */}
+                    <div className="flex border-b border-jules-border/30">
+                        <button
+                            onClick={() => setRightPanelTab("chat")}
+                            className={`flex-1 py-2 text-xs font-bold uppercase transition-colors ${rightPanelTab === "chat" ? "text-jules-primary border-b-2 border-jules-accent bg-[#0A0A23]" : "text-jules-muted hover:bg-[#0A0A23]"}`}
+                        >
+                            Chat
+                        </button>
+                        <button
+                            onClick={() => setRightPanelTab("tasks")}
+                            className={`flex-1 py-2 text-xs font-bold uppercase transition-colors ${rightPanelTab === "tasks" ? "text-jules-primary border-b-2 border-jules-accent bg-[#0A0A23]" : "text-jules-muted hover:bg-[#0A0A23]"}`}
+                        >
+                            Tasks
+                        </button>
+                    </div>
+
+                    <div className="flex-1 overflow-hidden relative">
+                        {rightPanelTab === "chat" ? (
+                            <div className="h-full flex flex-col">
+                                <div className="flex-1 overflow-y-auto p-4 space-y-4">
+                                    {messages.map((m, i) => {
+                                        const isMe = m.senderId?._id === user._id || m.senderId === user._id; // Handle populated vs raw ID
+                                        const senderName = m.senderId?.username || m.senderId?.name || "User";
+
+                                        return (
+                                            <div key={i} className={`flex gap-3 ${isMe ? "flex-row-reverse" : ""}`}>
+                                                 <div className={`w-6 h-6 rounded-full text-[10px] flex items-center justify-center font-bold shrink-0 mt-1 ${isMe ? "bg-jules-accent text-jules-bg" : "bg-[#E546CA] text-white"}`}>
+                                                     {senderName.slice(0, 2).toUpperCase()}
+                                                 </div>
+                                                 <div className={`${isMe ? "text-right" : "text-left"} max-w-[80%]`}>
+                                                     <div className="text-xs font-bold text-jules-muted mb-0.5">{senderName}</div>
+                                                     <div className={`text-sm p-2 rounded-lg border text-jules-primary/90 break-words ${isMe ? "bg-jules-accent/10 border-jules-accent/30 rounded-tr-none" : "bg-[#0A0A23] border-jules-border/30 rounded-tl-none"}`}>
+                                                         {m.content}
+                                                     </div>
+                                                 </div>
+                                            </div>
+                                        );
+                                    })}
+                                    <div ref={messagesEndRef} />
+                                </div>
+                                <div className="p-3 border-t border-jules-border/30 bg-[#120129]">
+                                    <input
+                                        type="text"
+                                        placeholder="Write a message..."
+                                        value={chatText}
+                                        onChange={(e) => setChatText(e.target.value)}
+                                        onKeyDown={(e) => e.key === 'Enter' && sendMessage()}
+                                        className="w-full bg-[#0A0A23] border border-jules-border/30 rounded px-3 py-2 text-sm text-jules-primary focus:outline-none focus:border-jules-accent"
+                                    />
+                                </div>
+                            </div>
+                        ) : (
+                            <div className="h-full flex flex-col p-4">
+                                <div className="mb-4 flex gap-2">
+                                     <input
+                                        className="flex-1 bg-[#0A0A23] border border-jules-border/30 rounded px-2 py-1 text-xs text-white"
+                                        placeholder="New Task..."
+                                        value={taskTitle}
+                                        onChange={(e) => setTaskTitle(e.target.value)}
+                                        onKeyDown={(e) => e.key === 'Enter' && createTask()}
+                                     />
+                                     <button onClick={createTask} className="bg-jules-accent text-jules-bg text-xs font-bold px-2 rounded">+</button>
+                                </div>
+                                <div className="space-y-3 overflow-y-auto flex-1">
+                                    {tasks.map((t) => (
+                                        <div key={t._id} className="flex items-start gap-3 group cursor-pointer" onClick={() => toggleTask(t)}>
+                                            <div className={`w-4 h-4 mt-0.5 border rounded flex items-center justify-center text-[10px] transition-colors ${t.status === 'done' ? "border-green-500 bg-green-500/20 text-green-500" : "border-jules-muted/50 group-hover:border-jules-accent"}`}>
+                                                {t.status === 'done' && "✓"}
+                                            </div>
+                                            <div className={`text-sm ${t.status === 'done' ? "text-jules-muted line-through" : "text-jules-primary"}`}>
+                                                {t.title}
+                                            </div>
+                                        </div>
+                                    ))}
+                                    {tasks.length === 0 && <div className="text-xs text-jules-muted text-center mt-10">No tasks yet</div>}
+                                </div>
+                            </div>
+                        )}
+                    </div>
+                </aside>
+
+            </div>
+        </div>
+    );
 }

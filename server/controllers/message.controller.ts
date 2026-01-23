@@ -1,33 +1,29 @@
-const Message = require("../models/Message");
+import { Response } from 'express';
+import Message from '@/models/Message';
+import { AuthRequest } from '../middleware/auth';
 
-// @desc    Get project messages
-// @route   GET /api/projects/:id/messages
-// @access  Private
-exports.getMessages = async (req, res) => {
+export const getMessages = async (req: AuthRequest, res: Response) => {
     try {
+        if (!req.user) return res.status(401).json({ message: "Not authorized" });
         const messages = await Message.find({ projectId: req.params.id })
             .populate("senderId", "name username")
             .sort({ createdAt: 1 });
-
         res.json(messages);
-    } catch (error) {
+    } catch (error: any) {
         res.status(500).json({ message: error.message });
     }
 };
 
-// @desc    Send message
-// @route   POST /api/projects/:id/messages
-// @access  Private
-exports.sendMessage = async (req, res) => {
+export const sendMessage = async (req: AuthRequest, res: Response) => {
     try {
+        if (!req.user) return res.status(401).json({ message: "Not authorized" });
         const message = await Message.create({
             projectId: req.params.id,
             senderId: req.user.id,
             content: req.body.content
         });
-
         res.status(201).json(message);
-    } catch (error) {
+    } catch (error: any) {
         res.status(500).json({ message: error.message });
     }
 };
