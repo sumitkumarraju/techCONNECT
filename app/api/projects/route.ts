@@ -1,27 +1,38 @@
-import { NextResponse } from 'next/server';
-import dbConnect from '@/lib/db';
+import { NextRequest, NextResponse } from 'next/server';
+import connectDB from '@/lib/db';
 import Project from '@/models/Project';
-import jwt, { JwtPayload } from 'jsonwebtoken';
+import jwt from 'jsonwebtoken';
 
-const JWT_SECRET = process.env.JWT_SECRET || 'secret-key';
+export const dynamic = 'force-dynamic';
 
-function getUserFromToken(req: Request) {
-  const authHeader = req.headers.get('authorization');
-  if (!authHeader) return null;
-  const token = authHeader.split(' ')[1];
-  try {
-    return jwt.verify(token, JWT_SECRET) as JwtPayload;
-  } catch (e) {
-    return null;
-  }
+const getDataFromToken = (req: NextRequest) => {
+    try {
+        const token = req.headers.get("Authorization")?.split(" ")[1];
+        if (!token) return null;
+        const decoded: any = jwt.verify(token, process.env.JWT_SECRET || 'devsecret');
+        return decoded.id;
+    } catch (error: any) {
+        return null;
+    }
 }
 
-export async function GET(req: Request) {
-  try {
-    await dbConnect();
-    const user = getUserFromToken(req);
-    if (!user) return NextResponse.json({ message: 'Unauthorized' }, { status: 401 });
+export async function POST(req: NextRequest) {
+    try {
+        await connectDB();
+        const userId = getDataFromToken(req);
+        if (!userId) {
+            return NextResponse.json({ message: "Not authorized" }, { status: 401 });
+        }
 
+        const body = await req.json();
+        const project = await Project.create({
+            name: body.name,
+            description: body.description,
+            ownerId: userId,
+            members: [userId],
+            isPublic: body.isPublic || false,
+            techStack: body.techStack || []
+        });
     const projects = await Project.find({
       $or: [
         { ownerId: user.userId },
@@ -50,8 +61,8 @@ export async function POST(req: Request) {
       techStack: techStack || []
     });
 
-    return NextResponse.json(project, { status: 201 });
-  } catch (error) {
-    return NextResponse.json({ message: 'Server error' }, { status: 500 });
-  }
+        return NextResponse.json(project, { status: 201 });
+    } catch (error: any) {
+        return NextResponse.json({ message: error.message }, { status: 500 });
+    }
 }
