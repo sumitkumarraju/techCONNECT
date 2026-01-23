@@ -1,18 +1,17 @@
-const User = require("../models/User");
-const bcrypt = require("bcryptjs");
-const jwt = require("jsonwebtoken");
+import { Request, Response } from 'express';
+import bcrypt from 'bcryptjs';
+import jwt from 'jsonwebtoken';
+import User from '@/models/User';
+import { AuthRequest } from '../middleware/auth';
 
-// Helper: generate JWT
-const generateToken = (id) => {
+const generateToken = (id: string) => {
+    if (!process.env.JWT_SECRET) throw new Error("JWT_SECRET missing");
     return jwt.sign({ id }, process.env.JWT_SECRET, {
         expiresIn: "7d"
     });
 };
 
-// @desc    Register new user
-// @route   POST /api/auth/register
-// @access  Public
-exports.registerUser = async (req, res) => {
+export const registerUser = async (req: Request, res: Response) => {
     try {
         const { name, username, email, password } = req.body;
 
@@ -43,17 +42,14 @@ exports.registerUser = async (req, res) => {
             name: user.name,
             username: user.username,
             email: user.email,
-            token: generateToken(user._id)
+            token: generateToken(user._id.toString())
         });
-    } catch (error) {
+    } catch (error: any) {
         res.status(500).json({ message: error.message });
     }
 };
 
-// @desc    Login user
-// @route   POST /api/auth/login
-// @access  Public
-exports.loginUser = async (req, res) => {
+export const loginUser = async (req: Request, res: Response) => {
     try {
         const { email, password } = req.body;
 
@@ -74,21 +70,19 @@ exports.loginUser = async (req, res) => {
             name: user.name,
             username: user.username,
             email: user.email,
-            token: generateToken(user._id)
+            token: generateToken(user._id.toString())
         });
-    } catch (error) {
+    } catch (error: any) {
         res.status(500).json({ message: error.message });
     }
 };
 
-// @desc    Get current user
-// @route   GET /api/auth/me
-// @access  Private
-exports.getMe = async (req, res) => {
+export const getMe = async (req: AuthRequest, res: Response) => {
     try {
+        if (!req.user) return res.status(401).json({ message: "Not authorized" });
         const user = await User.findById(req.user.id).select("-passwordHash");
         res.json(user);
-    } catch (error) {
+    } catch (error: any) {
         res.status(500).json({ message: error.message });
     }
 };
