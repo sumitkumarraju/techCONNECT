@@ -7,6 +7,7 @@ exports.createProject = async (req, res) => {
     try {
         const project = await Project.create({
             name: req.body.name,
+            description: req.body.description,
             ownerId: req.user.id,
             members: [req.user.id],
             isPublic: req.body.isPublic || false,
