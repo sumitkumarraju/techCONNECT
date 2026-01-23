@@ -4,6 +4,7 @@ import { useRouter } from "next/navigation";
 import Link from 'next/link';
 
 export default function Register() {
+  const [name, setName] = useState('');
   const [username, setUsername] = useState('');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
@@ -17,7 +18,7 @@ export default function Register() {
       const res = await fetch('/api/auth/register', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ username, email, password }),
+        body: JSON.stringify({ name, username, email, password }),
       });
       const data = await res.json();
       if (!res.ok) throw new Error(data.message);
@@ -72,6 +73,24 @@ export default function Register() {
               <div className="relative group">
                 <input
                   type="text"
+                  id="name"
+                  className="peer w-full bg-transparent border border-jules-border rounded-xl px-4 py-3 text-sm text-white placeholder-transparent focus:outline-none focus:border-jules-accent focus:ring-1 focus:ring-jules-accent transition-all animate-fade-in"
+                  placeholder="Full Name"
+                  value={name}
+                  onChange={(e) => setName(e.target.value)}
+                  required
+                />
+                <label
+                  htmlFor="name"
+                  className="peer-label absolute left-3 top-3.5 text-sm text-jules-muted bg-jules-surface px-1 transition-all duration-200 pointer-events-none peer-placeholder-shown:top-3.5 peer-placeholder-shown:text-sm peer-placeholder-shown:text-jules-muted peer-focus:-top-2.5 peer-focus:text-xs peer-focus:text-jules-accent peer-[&:not(:placeholder-shown)]:-top-2.5 peer-[&:not(:placeholder-shown)]:text-xs peer-[&:not(:placeholder-shown)]:text-jules-accent"
+                >
+                  Full Name
+                </label>
+              </div>
+
+              <div className="relative group">
+                <input
+                  type="text"
                   id="username"
                   className="peer w-full bg-transparent border border-jules-border rounded-xl px-4 py-3 text-sm text-white placeholder-transparent focus:outline-none focus:border-jules-accent focus:ring-1 focus:ring-jules-accent transition-all animate-fade-in"
                   placeholder="Username"
@@ -121,7 +140,6 @@ export default function Register() {
                 >
                   Password
                 </label>
-
                 <button type="button" onClick={() => setShowPassword(!showPassword)} className="absolute right-3 top-3.5 text-jules-muted hover:text-white">
                   {showPassword ? (
                     <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M13.875 18.825A10.05 10.05 0 0112 19c-4.478 0-8.268-2.943-9.543-7a9.97 9.97 0 011.563-3.029m5.858.908a3 3 0 114.243 4.243M9.878 9.878l4.242 4.242M9.88 9.88l-3.29-3.29m7.532 7.532l3.29 3.29M3 3l3.59 3.59m0 0A9.953 9.953 0 0112 5c4.478 0 8.268 2.943 9.543 7a10.025 10.025 0 01-4.132 5.411m0 0L21 21" /></svg>

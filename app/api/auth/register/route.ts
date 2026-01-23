@@ -6,7 +6,7 @@ import bcrypt from 'bcryptjs';
 export async function POST(req: Request) {
   try {
     await dbConnect();
-    const { username, email, password } = await req.json();
+    const { name, username, email, password } = await req.json();
 
     const existingUser = await User.findOne({ $or: [{ email }, { username }] });
     if (existingUser) {
@@ -14,7 +14,12 @@ export async function POST(req: Request) {
     }
 
     const hashedPassword = await bcrypt.hash(password, 10);
-    const user = await User.create({ username, email, password: hashedPassword });
+    const user = await User.create({
+      name,
+      username,
+      email,
+      passwordHash: hashedPassword
+    });
 
     return NextResponse.json({ message: 'User created successfully', user: { id: user._id, username: user.username, email: user.email } }, { status: 201 });
   } catch (error) {
