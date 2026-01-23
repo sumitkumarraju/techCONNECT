@@ -91,7 +91,7 @@ export default function ProjectPage() {
 
     // Actions
     const sendMessage = async () => {
-        if (!chatText.trim()) return;
+        if (!chatText.trim() || !user) return;
 
         // Optimistic UI update not strictly needed as socket is fast, but good practice
         // We'll wait for socket/API for now to keep it simple and consistent
