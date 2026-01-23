@@ -1,4 +1,4 @@
-'use client';
+"use client";
 
 import { LoaderOne } from '@/components/ui/Loader';
 import { useRouter } from 'next/navigation';
@@ -18,22 +18,23 @@ export default function Login() {
   const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
     setIsLoading(true);
+    setError('');
+
     try {
-      const res = await fetch('/api/auth/login', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ email, password }),
-      });
-      const data = await res.json();
-      if (!res.ok) throw new Error(data.message);
+      // Use the login function from AuthContext which handles API call
+      const res = await login(email, password);
 
       // Simulate network delay for the animation to be seen
       await new Promise(resolve => setTimeout(resolve, 1500));
 
-      login(data.token, data.user);
-      router.push('/workspace');
+      if (res.success) {
+        router.push('/dashboard');
+      } else {
+        setError(res.error || 'Login failed');
+      }
     } catch (err: any) {
-      setError(err.message);
+      setError(err.message || 'An unexpected error occurred');
+    } finally {
       setIsLoading(false);
     }
   };
@@ -137,7 +138,7 @@ export default function Login() {
               </div>
 
               <button type="submit" className="w-full bg-jules-primary text-black font-semibold py-3 rounded-full hover:bg-white transition-all transform hover:scale-[1.02] active:scale-[0.98] shadow-[0_0_20px_rgba(255,255,255,0.1)]">
-                Sign In
+                {isLoading ? 'Signing In...' : 'Sign In'}
               </button>
             </form>
 
@@ -156,10 +157,7 @@ export default function Login() {
       </main>
 
       <style jsx>{`
-        /* Floating Label Logic - tailwind arbitrary variants are a bit verbose, so I added the logic in className above using peer-* 
-        (peer-placeholder-shown, peer-focus, peer-[:not(:placeholder-shown)]) 
-        but kept the style block if needed for exact match, actually I translated it to Tailwind classes inline 
-        to be more "Next.js" native, but let's double check the inline classes. */
+        /* Reuse existing styles */
       `}</style>
     </div>
   );

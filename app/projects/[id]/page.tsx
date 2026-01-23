@@ -1,176 +1,240 @@
 "use client";
-import React, { useEffect, useState, useRef } from 'react';
-import { useAuth } from '@/context/AuthContext';
-import { useParams } from 'next/navigation';
-import Editor, { OnChange } from '@monaco-editor/react';
-import io, { Socket } from 'socket.io-client';
-import Link from 'next/link';
 
-let socket: Socket;
+import { useEffect, useState, useRef } from "react";
+import API from "@/lib/api";
+import socket from "@/lib/socket";
+import { useAuth } from "@/context/AuthContext";
+import { useParams } from "next/navigation";
+import CodeEditor from "@/components/CodeEditor";
+import OnlineUsers from "@/components/OnlineUsers";
 
-interface Version {
-  code: string;
-  timestamp: string;
-  _id: string;
-}
-
-export default function ProjectEditor() {
-  const { id } = useParams();
-  const { token, user } = useAuth();
-  const [code, setCode] = useState('// Loading...');
+export default function ProjectPage({ params }: { params: { id: string } }) {
+  const { id: projectId } = params;
+  const { user } = useAuth();
+  const [tasks, setTasks] = useState([]);
+  const [messages, setMessages] = useState([]);
+  const [chatText, setChatText] = useState("");
+  const [taskTitle, setTaskTitle] = useState("");
   const [project, setProject] = useState<any>(null);
-  const [saving, setSaving] = useState(false);
-  const [history, setHistory] = useState<Version[]>([]);
-  const [showHistory, setShowHistory] = useState(false);
-  const isRemoteUpdate = useRef(false);
+  const [onlineUsers, setOnlineUsers] = useState([]);
+  const [activeTab, setActiveTab] = useState<'tasks' | 'code'>('tasks');
+  const messagesEndRef = useRef<HTMLDivElement>(null);
+
+  const scrollToBottom = () => {
+    messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
+  };
 
   useEffect(() => {
-    if (id && token) {
-      fetchProject();
-      initSocket();
-    }
-    return () => {
-      if (socket) socket.disconnect();
-    };
-  }, [id, token]);
+    scrollToBottom();
+  }, [messages]);
 
-  const initSocket = async () => {
-    socket = io(); // Connects to the same host
+  useEffect(() => {
+    if (!user) return;
 
-    socket.on('connect', () => {
-      console.log('Connected to socket server');
-      socket.emit('join-project', id);
+    // Fetch Initial Data
+    API.get(`/projects/${projectId}`)
+      .then(res => setProject(res.data))
+      .catch(err => console.error(err));
+
+    API.get(`/projects/${projectId}/tasks`)
+      .then(res => setTasks(res.data))
+      .catch(err => console.error(err));
+
+    API.get(`/projects/${projectId}/messages`)
+      .then(res => setMessages(res.data))
+      .catch(err => console.error(err));
+
+    // Socket Connection
+    socket.connect();
+    socket.emit("join-project", {
+      projectId,
+      user: { username: user.username, name: user.name, _id: user._id }
     });
 
-    socket.on('code-update', (newCode: string) => {
-      isRemoteUpdate.current = true;
-      setCode(newCode);
+    // Listeners
+    socket.on("receive-message", (message) => {
+      setMessages(prev => [...prev, message]);
     });
-  };
 
-  const fetchProject = async () => {
-    try {
-      const res = await fetch(`/api/projects/${id}`, {
-        headers: { Authorization: `Bearer ${token}` },
-      });
-      if (res.ok) {
-        const data = await res.json();
-        setProject(data);
-        setCode(data.code || '// Start coding...');
-        if (data.versionHistory) {
-             setHistory(data.versionHistory);
+    socket.on("online-users", (users) => {
+      setOnlineUsers(users);
+    });
+
+    socket.on("task-sync", (updatedTask) => {
+      setTasks(prev => {
+        // Check if task exists, if so update it, else add it
+        const exists = prev.find((t: any) => t._id === updatedTask._id);
+        if (exists) {
+          return prev.map((t: any) => t._id === updatedTask._id ? updatedTask : t);
+        } else {
+          return [updatedTask, ...prev];
         }
-      }
-    } catch (error) {
-      console.error(error);
-    }
-  };
-
-  const handleEditorChange: OnChange = (value, event) => {
-    if (isRemoteUpdate.current) {
-      isRemoteUpdate.current = false;
-      return;
-    }
-    const newCode = value || '';
-    setCode(newCode);
-    socket.emit('code-change', { projectId: id, code: newCode });
-  };
-
-  const saveCode = async () => {
-    setSaving(true);
-    try {
-      const res = await fetch(`/api/projects/${id}/save`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          Authorization: `Bearer ${token}`,
-        },
-        body: JSON.stringify({ code }),
       });
-      if (res.ok) {
-        const data = await res.json();
-        setHistory(data.versionHistory);
-        alert('Saved successfully!');
+    });
+
+    return () => {
+      socket.off("receive-message");
+      socket.off("online-users");
+      socket.off("task-sync");
+      socket.disconnect();
+    };
+  }, [projectId, user]);
+
+  const sendMessage = async () => {
+    if (!chatText.trim()) return;
+
+    const payload = {
+      projectId,
+      message: {
+        content: chatText,
+        senderId: { _id: user._id, username: user.username, name: user.name }
       }
+    };
+
+    setMessages(prev => [...prev, { ...payload.message, createdAt: new Date().toISOString() }]);
+    setChatText("");
+
+    try {
+      await API.post(`/projects/${projectId}/messages`, { content: payload.message.content });
+      socket.emit("send-message", payload);
     } catch (error) {
-      console.error(error);
-      alert('Failed to save');
-    } finally {
-      setSaving(false);
+      console.error("Failed to send message", error);
     }
   };
 
-  const restoreVersion = (versionCode: string) => {
-      if(confirm("Are you sure? This will overwrite your current editor content.")) {
-          setCode(versionCode);
-          socket.emit('code-change', { projectId: id, code: versionCode });
-          setShowHistory(false);
-      }
-  }
+  const createTask = async () => {
+    if (!taskTitle.trim()) return;
+    try {
+      const { data } = await API.post(`/projects/${projectId}/tasks`, { title: taskTitle });
+      setTasks([data, ...tasks]);
+      setTaskTitle("");
 
-  if (!project) return <div className="p-8">Loading Project...</div>;
+      socket.emit("task-updated", { projectId, task: data });
+    } catch (error) {
+      console.error(error);
+    }
+  };
+
+  const toggleTask = async (task: any) => {
+    const newStatus = task.status === 'done' ? 'todo' : 'done';
+    // Optimistic update
+    const updatedTask = { ...task, status: newStatus };
+    setTasks(prev => prev.map((t: any) => t._id === task._id ? updatedTask : t));
+
+    try {
+      const { data } = await API.put(`/tasks/${task._id}`, { status: newStatus });
+      socket.emit("task-updated", { projectId, task: data });
+    } catch (error) {
+      console.error("Failed to toggle task", error);
+    }
+  };
+
+  if (!user) return null;
 
   return (
-    <div className="flex flex-col h-screen bg-gray-900 text-white">
-      <header className="flex items-center justify-between px-6 py-3 bg-gray-800 border-b border-gray-700">
-        <div className="flex items-center gap-4">
-            <Link href="/dashboard" className="text-gray-400 hover:text-white">← Dashboard</Link>
-            <h1 className="text-lg font-bold">{project.title}</h1>
-        </div>
-        <div className="flex gap-3">
-          <button
-            onClick={() => setShowHistory(!showHistory)}
-            className="px-3 py-1 bg-gray-700 hover:bg-gray-600 rounded text-sm"
-          >
-            {showHistory ? 'Hide History' : 'History'}
-          </button>
-          <button
-            onClick={saveCode}
-            disabled={saving}
-            className="px-4 py-1 bg-indigo-600 hover:bg-indigo-500 rounded text-sm font-bold disabled:opacity-50"
-          >
-            {saving ? 'Saving...' : 'Save'}
-          </button>
-        </div>
-      </header>
+    <div className="flex h-screen bg-[#09090b] text-white overflow-hidden">
 
-      <div className="flex flex-1 overflow-hidden">
-        <div className="flex-1">
-            <Editor
-                height="100%"
-                defaultLanguage="javascript"
-                theme="vs-dark"
-                value={code}
-                onChange={handleEditorChange}
-                options={{
-                    minimap: { enabled: false },
-                    fontSize: 14,
-                }}
-            />
+      {/* LEFT PANEL: Tasks & Code Switcher */}
+      <div className="flex-1 flex flex-col min-w-0 border-r border-[#27272a]">
+        <div className="h-14 border-b border-[#27272a] flex items-center justify-between px-6 bg-[#0c0c0e]">
+          <h1 className="font-bold text-lg truncate pr-4">{project?.name || 'Loading...'}</h1>
+          <div className="flex gap-2 bg-[#18181b] p-1 rounded-lg">
+            <button
+              onClick={() => setActiveTab('tasks')}
+              className={`px-4 py-1.5 text-xs font-bold rounded-md transition-all ${activeTab === 'tasks' ? 'bg-zinc-700 text-white shadow' : 'text-zinc-500 hover:text-zinc-300'}`}
+            >
+              Tasks
+            </button>
+            <button
+              onClick={() => setActiveTab('code')}
+              className={`px-4 py-1.5 text-xs font-bold rounded-md transition-all ${activeTab === 'code' ? 'bg-blue-600 text-white shadow' : 'text-zinc-500 hover:text-zinc-300'}`}
+            >
+              Code Editor <span className="text-[9px] bg-red-500 text-white px-1 rounded ml-1 animate-pulse">LIVE</span>
+            </button>
+          </div>
         </div>
 
-        {showHistory && (
-            <div className="w-64 bg-gray-800 border-l border-gray-700 overflow-y-auto p-4">
-                <h3 className="text-sm font-bold text-gray-400 mb-4">Version History</h3>
-                <div className="space-y-3">
-                    {history.slice().reverse().map((ver, idx) => (
-                        <div key={ver._id || idx} className="p-3 bg-gray-700 rounded text-sm">
-                            <div className="text-xs text-gray-400 mb-1">
-                                {new Date(ver.timestamp).toLocaleString()}
-                            </div>
-                            <button
-                                onClick={() => restoreVersion(ver.code)}
-                                className="text-indigo-400 hover:text-indigo-300 text-xs"
-                            >
-                                Restore this version
-                            </button>
-                        </div>
-                    ))}
-                    {history.length === 0 && <p className="text-gray-500 text-xs">No saved versions yet.</p>}
+        <div className="flex-1 overflow-hidden relative">
+          {activeTab === 'tasks' ? (
+            <div className="h-full p-6 overflow-y-auto">
+              <div className="max-w-2xl mx-auto">
+                <div className="flex gap-2 mb-8">
+                  <input
+                    value={taskTitle}
+                    onChange={(e) => setTaskTitle(e.target.value)}
+                    className="flex-1 bg-[#18181b] border border-[#27272a] rounded-xl px-4 py-3 text-sm focus:outline-none focus:border-blue-500 transition-colors"
+                    placeholder="Add a new task..."
+                    onKeyDown={(e) => e.key === 'Enter' && createTask()}
+                  />
+                  <button onClick={createTask} className="bg-blue-600 hover:bg-blue-500 px-6 rounded-xl text-sm font-bold transition-colors">
+                    Add
+                  </button>
                 </div>
+
+                <div className="space-y-3">
+                  {tasks.map((t: any) => (
+                    <div key={t._id} className="p-4 bg-[#18181b] rounded-xl border border-[#27272a] flex justify-between items-center group hover:border-zinc-700 transition-all">
+                      <div className="flex items-center gap-3">
+                        <button
+                          onClick={() => toggleTask(t)}
+                          className={`w-5 h-5 rounded border flex items-center justify-center transition-colors ${t.status === 'done' ? 'bg-emerald-500 border-emerald-500' : 'border-zinc-600 hover:border-zinc-500'}`}
+                        >
+                          {t.status === 'done' && <svg className="w-3.5 h-3.5 text-black" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="3" d="M5 13l4 4L19 7"></path></svg>}
+                        </button>
+                        <span className={`text-sm ${t.status === 'done' ? 'line-through text-zinc-500' : 'text-zinc-200'}`}>{t.title}</span>
+                      </div>
+                      <span className={`text-[10px] uppercase px-2 py-1 rounded font-bold ${t.status === 'done' ? 'bg-emerald-500/10 text-emerald-500' : 'bg-blue-500/10 text-blue-500'
+                        }`}>
+                        {t.status}
+                      </span>
+                    </div>
+                  ))}
+                  {tasks.length === 0 && <div className="text-center py-12 text-zinc-500">No tasks yet. Create one above!</div>}
+                </div>
+              </div>
             </div>
-        )}
+          ) : (
+            <div className="h-full p-4 bg-[#1e1e1e]">
+              <CodeEditor projectId={projectId} />
+            </div>
+          )}
+        </div>
       </div>
+
+      {/* RIGHT PANEL: Chat & Online Users */}
+      <div className="w-80 flex flex-col border-l border-[#27272a] bg-[#0c0c0e]">
+        <div className="h-14 border-b border-[#27272a] flex items-center justify-between px-4 bg-[#0c0c0e]">
+          <span className="font-bold text-sm text-zinc-400">Team Chat</span>
+          <OnlineUsers users={onlineUsers} />
+        </div>
+
+        <div className="flex-1 overflow-y-auto p-4 space-y-4">
+          {messages.map((m: any, i) => {
+            const isMe = m.senderId?._id === user._id || m.senderId === user._id;
+            return (
+              <div key={i} className={`flex ${isMe ? 'justify-end' : 'justify-start'}`}>
+                <div className={`max-w-[85%] rounded-2xl px-4 py-2.5 text-sm ${isMe ? 'bg-blue-600 text-white rounded-br-none' : 'bg-[#18181b] border border-[#27272a] text-zinc-200 rounded-bl-none'
+                  }`}>
+                  {!isMe && <p className="text-[10px] text-zinc-500 mb-1 font-bold">{m.senderId?.username || 'User'}</p>}
+                  <p>{m.content}</p>
+                </div>
+              </div>
+            );
+          })}
+          <div ref={messagesEndRef} />
+        </div>
+
+        <div className="p-4 border-t border-[#27272a] bg-[#09090b]">
+          <input
+            value={chatText}
+            onChange={(e) => setChatText(e.target.value)}
+            onKeyDown={(e) => e.key === 'Enter' && sendMessage()}
+            className="w-full bg-[#18181b] border border-[#27272a] rounded-xl px-4 py-2.5 text-sm focus:outline-none focus:border-blue-500 transition-colors placeholder-zinc-600"
+            placeholder="Type a message..."
+          />
+        </div>
+      </div>
+
     </div>
   );
 }

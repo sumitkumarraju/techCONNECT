@@ -1,53 +1,60 @@
 "use client";
-import React, { createContext, useState, useEffect, useContext } from 'react';
-import { useRouter } from 'next/navigation';
 
-interface AuthContextType {
-  user: any;
-  token: string | null;
-  login: (token: string, userData: any) => void;
-  logout: () => void;
-}
+import { createContext, useContext, useEffect, useState } from "react";
+import API from "@/lib/api";
 
-const AuthContext = createContext<AuthContextType>({
-  user: null,
-  token: null,
-  login: () => {},
-  logout: () => {},
-});
+const AuthContext = createContext();
 
-export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
-  const [user, setUser] = useState<any>(null);
-  const [token, setToken] = useState<string | null>(null);
-  const router = useRouter();
+export const AuthProvider = ({ children }) => {
+  const [user, setUser] = useState(null);
+  const [loading, setLoading] = useState(true);
 
-  useEffect(() => {
-    const storedToken = localStorage.getItem('token');
-    const storedUser = localStorage.getItem('user');
-    if (storedToken && storedUser) {
-      setToken(storedToken);
-      setUser(JSON.parse(storedUser));
+  const login = async (email, password) => {
+    try {
+      const { data } = await API.post("/auth/login", { email, password });
+      localStorage.setItem("token", data.token);
+      setUser(data);
+      return { success: true };
+    } catch (error) {
+      return { success: false, error: error.response?.data?.message || "Login failed" };
     }
-  }, []);
+  };
 
-  const login = (newToken: string, userData: any) => {
-    setToken(newToken);
-    setUser(userData);
-    localStorage.setItem('token', newToken);
-    localStorage.setItem('user', JSON.stringify(userData));
-    router.push('/dashboard');
+  const register = async (formData) => {
+    try {
+      const { data } = await API.post("/auth/register", formData);
+      localStorage.setItem("token", data.token);
+      setUser(data);
+      return { success: true };
+    } catch (error) {
+      return { success: false, error: error.response?.data?.message || "Registration failed" };
+    }
   };
 
   const logout = () => {
-    setToken(null);
+    localStorage.removeItem("token");
     setUser(null);
-    localStorage.removeItem('token');
-    localStorage.removeItem('user');
-    router.push('/login');
   };
 
+  const loadUser = async () => {
+    try {
+      const token = localStorage.getItem("token");
+      if (!token) throw new Error("No token");
+      const { data } = await API.get("/auth/me");
+      setUser({ ...data, token }); // Ensure token is part of user object if needed
+    } catch {
+      logout();
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    loadUser();
+  }, []);
+
   return (
-    <AuthContext.Provider value={{ user, token, login, logout }}>
+    <AuthContext.Provider value={{ user, loading, login, register, logout }}>
       {children}
     </AuthContext.Provider>
   );
