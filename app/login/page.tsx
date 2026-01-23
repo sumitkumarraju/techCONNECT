@@ -1,7 +1,10 @@
-"use client";
+'use client';
+
 import { LoaderOne } from '@/components/ui/Loader';
 import { useRouter } from 'next/navigation';
 import React, { useState } from 'react';
+import { useAuth } from '@/context/AuthContext';
+import Link from 'next/link';
 
 export default function Login() {
   const [email, setEmail] = useState('');
