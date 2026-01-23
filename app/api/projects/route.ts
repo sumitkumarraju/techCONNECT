@@ -23,11 +23,11 @@ export async function GET(req: Request) {
     if (!user) return NextResponse.json({ message: 'Unauthorized' }, { status: 401 });
 
     const projects = await Project.find({
-        $or: [
-            { owner: user.userId },
-            { collaborators: user.userId }
-        ]
-    }).populate('owner', 'username').sort({ updatedAt: -1 });
+      $or: [
+        { ownerId: user.userId },
+        { members: user.userId }
+      ]
+    }).populate('ownerId', 'username').sort({ updatedAt: -1 });
     return NextResponse.json(projects);
   } catch (error) {
     return NextResponse.json({ message: 'Server error' }, { status: 500 });
@@ -40,12 +40,14 @@ export async function POST(req: Request) {
     const user = getUserFromToken(req);
     if (!user) return NextResponse.json({ message: 'Unauthorized' }, { status: 401 });
 
-    const { title, description } = await req.json();
+    const { name, description, isPublic, techStack } = await req.json();
     const project = await Project.create({
-      title,
+      name,
       description,
-      owner: user.userId,
-      collaborators: []
+      ownerId: user.userId,
+      members: [user.userId],
+      isPublic: isPublic || false,
+      techStack: techStack || []
     });
 
     return NextResponse.json(project, { status: 201 });
