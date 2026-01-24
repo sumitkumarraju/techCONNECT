@@ -35,16 +35,16 @@ io.on("connection", (socket) => {
         // io.to(data.projectId).emit("online-users", Array.from(room)); 
     });
 
-    // Join Specific File Room (Optional, but good for cleanliness)
-    socket.on("join-file", (fileId) => {
-        socket.join(`file:${fileId}`);
-        console.log(`Socket ${socket.id} joined file: ${fileId}`);
+    socket.on("file-open", ({ projectId, fileId }) => {
+        socket.to(projectId).emit("file-opened", fileId);
     });
 
-    // Code Change Event
-    socket.on("code-change", ({ fileId, content }) => {
-        // Broadcast to everyone else editing this file
-        socket.to(`file:${fileId}`).emit("code-update", content);
+    socket.on("code-change", ({ projectId, fileId, content }) => {
+        // Broadcast to project room, client filters by fileId
+        socket.to(projectId).emit("code-update", {
+            fileId,
+            content,
+        });
     });
 
     // Chat Message

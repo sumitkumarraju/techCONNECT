@@ -49,7 +49,14 @@ export async function POST(req: NextRequest, { params }: { params: { id: string 
         if (!project) {
             return NextResponse.json({ message: "Project not found" }, { status: 404 });
         }
-        // TODO: Strict member check check if needed
+
+        // Check Permissions
+        const isOwner = project.ownerId.toString() === userId;
+        const isMember = project.members.some((m: any) => m.toString() === userId);
+
+        if (!isOwner && !isMember) {
+            return NextResponse.json({ message: "Not authorized to create files in this project" }, { status: 403 });
+        }
 
         const file = await CodeFile.create({
             projectId: params.id,

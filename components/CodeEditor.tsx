@@ -7,23 +7,34 @@ import socket from "@/lib/socket";
 interface CodeEditorProps {
     file: any;
     onCodeChange: (value: string) => void;
+    onSave?: () => void;
 }
 
-export default function CodeEditor({ file, onCodeChange }: CodeEditorProps) {
+export default function CodeEditor({ file, onCodeChange, onSave }: CodeEditorProps) {
     const editorRef = useRef<any>(null);
     const isRemoteUpdate = useRef(false);
 
     const handleEditorDidMount: OnMount = (editor, monaco) => {
         editorRef.current = editor;
 
+        // Custom Keybinding for Ctrl+S / Cmd+S
+        editor.addCommand(monaco.KeyMod.CtrlCmd | monaco.KeyCode.KeyS, () => {
+            if (onSave) {
+                onSave();
+            }
+        });
+
         // Listen for code updates from other users
-        socket.on("code-update", (newContent: string) => {
-            if (newContent !== editor.getValue()) {
-                isRemoteUpdate.current = true;
-                const position = editor.getPosition();
-                editor.setValue(newContent);
-                if (position) editor.setPosition(position);
-                isRemoteUpdate.current = false;
+        socket.on("code-update", ({ fileId, content }: { fileId: string; content: string }) => {
+            // Only update if this event is for the CURRENTLY open file
+            if (fileId === file._id) {
+                if (content !== editor.getValue()) {
+                    isRemoteUpdate.current = true;
+                    const position = editor.getPosition();
+                    editor.setValue(content);
+                    if (position) editor.setPosition(position);
+                    isRemoteUpdate.current = false;
+                }
             }
         });
     };
@@ -36,6 +47,7 @@ export default function CodeEditor({ file, onCodeChange }: CodeEditorProps) {
             // 2. Emit to Socket (if not a remote update)
             if (!isRemoteUpdate.current && file) {
                 socket.emit("code-change", {
+                    projectId: file.projectId,
                     fileId: file._id,
                     content: value
                 });
@@ -49,6 +61,12 @@ export default function CodeEditor({ file, onCodeChange }: CodeEditorProps) {
             // Unsubscribe from previous file updates (handled by parent joining/leaving rooms ideally, 
             // but here we just ensure we listen. Actually socket.on is global.
             // We should cleanup on unmount.
+
+            // Inform server we opened this file
+            socket.emit("file-open", {
+                projectId: file.projectId,
+                fileId: file._id
+            });
 
             const currentContent = editorRef.current.getValue();
             if (currentContent !== file.content) {

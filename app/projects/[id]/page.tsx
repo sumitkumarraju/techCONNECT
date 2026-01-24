@@ -91,7 +91,7 @@ export default function ProjectPage() {
                 // Ideally leave previous room, but socket.io handles multi-room fine.
                 // We'll rely on joining the new room.
             }
-            socket.emit("join-file", fileId);
+            // socket.emit("join-file", fileId); // REMOVED: Using project-scoped rooms now
 
             const { data } = await API.get(`/files/${fileId}`);
             setActiveFile(data);
@@ -253,13 +253,13 @@ export default function ProjectPage() {
         }
     };
 
-    if (!user) return <div className="h-screen bg-[#0A0A23] flex items-center justify-center text-jules-primary">Loading...</div>;
+    if (!user) return <div className="h-screen bg-[#1e1e1e] flex items-center justify-center text-white">Loading...</div>;
 
     return (
-        <div className="font-mono h-screen bg-[#0A0A23] text-jules-primary flex flex-col overflow-hidden selection:bg-jules-accent selection:text-jules-bg">
+        <div className="font-mono h-screen bg-[#1e1e1e] text-gray-300 flex flex-col overflow-hidden selection:bg-blue-500/30 selection:text-white">
 
-            {/* 🟣 TOP BAR */}
-            <header className="h-14 border-b border-jules-border/30 bg-[#120129] flex items-center justify-between px-4 shrink-0">
+            {/* 🟣 TOP BAR - VS Code Style */}
+            <header className="h-10 border-b border-[#2b2b2b] bg-[#333333] flex items-center justify-between px-3 shrink-0 select-none">
                 <div className="flex items-center gap-4">
                     <Link href="/dashboard" className="flex items-center gap-2 group">
                         <div className="w-6 h-6 bg-jules-primary flex items-center justify-center text-jules-bg font-bold text-xs rounded-none">&lt;/&gt;</div>
@@ -294,23 +294,23 @@ export default function ProjectPage() {
             <div className="flex-1 flex overflow-hidden">
 
                 {/* 📂 LEFT SIDEBAR - FILE EXPLORER */}
-                <aside className="w-64 border-r border-jules-border/30 bg-[#0E0E1E] flex flex-col shrink-0">
-                    <div className="p-3 border-b border-jules-border/30 text-xs font-bold text-jules-muted uppercase tracking-wider flex justify-between items-center">
+                <aside className="w-64 border-r border-[#2b2b2b] bg-[#252526] flex flex-col shrink-0 text-sm">
+                    <div className="px-4 py-2 text-[11px] font-bold text-gray-400 uppercase tracking-wider flex justify-between items-center shrink-0">
                         <span>Explorer</span>
                         <button
                             onClick={() => setIsCreatingFile(!isCreatingFile)}
-                            className="hover:text-jules-accent" title="New File"
+                            className="hover:text-white text-lg leading-none" title="New File"
                         >
                             +
                         </button>
                     </div>
 
                     {isCreatingFile && (
-                        <div className="p-2 bg-jules-surface/50">
+                        <div className="px-2 py-1 bg-[#37373d]">
                             <form onSubmit={handleCreateFile}>
                                 <input
                                     autoFocus
-                                    className="w-full bg-[#0A0A23] border border-jules-border text-xs px-2 py-1 focus:outline-none focus:border-jules-accent text-white"
+                                    className="w-full bg-transparent border border-blue-500 text-sm px-1 py-0.5 focus:outline-none text-white placeholder-gray-500"
                                     placeholder="filename.js"
                                     value={newFileName}
                                     onChange={e => setNewFileName(e.target.value)}
@@ -320,20 +320,20 @@ export default function ProjectPage() {
                         </div>
                     )}
 
-                    <div className="flex-1 overflow-y-auto p-2 text-sm text-jules-primary/80 space-y-0.5">
+                    <div className="flex-1 overflow-y-auto pt-1 space-y-0.5">
                         {files.map(file => (
                             <div
                                 key={file._id}
                                 onClick={() => fetchFileContent(file._id)}
-                                className={`flex items-center justify-between px-2 py-1.5 cursor-pointer rounded text-xs group ${activeFile?._id === file._id ? "bg-jules-accent/10 text-jules-accent font-bold" : "hover:bg-jules-surface"}`}
+                                className={`flex items-center justify-between px-4 py-1 cursor-pointer text-sm group ${activeFile?._id === file._id ? "bg-[#37373d] text-white" : "hover:bg-[#2a2d2e] text-gray-300"}`}
                             >
                                 <div className="flex items-center gap-2 truncate">
-                                    <span className="opacity-50">📄</span>
+                                    <span className="opacity-70 text-blue-400">📄</span>
                                     {file.name}
                                 </div>
                                 <button
                                     onClick={(e) => { e.stopPropagation(); handleDeleteFile(file._id); }}
-                                    className="hidden group-hover:block text-red-400 hover:text-red-300"
+                                    className="hidden group-hover:block text-gray-400 hover:text-white"
                                 >
                                     ×
                                 </button>
@@ -342,12 +342,12 @@ export default function ProjectPage() {
                     </div>
 
                     {/* Members Panel */}
-                    <div className="p-3 border-t border-jules-border/30">
-                        <div className="text-xs font-bold text-jules-muted uppercase tracking-wider mb-3">Online</div>
-                        <div className="space-y-2">
+                    <div className="px-4 py-3 border-t border-[#2b2b2b]">
+                        <div className="text-[10px] font-bold text-gray-500 uppercase tracking-wider mb-2">Online</div>
+                        <div className="space-y-1">
                             {onlineUsers.map((u, i) => (
-                                <div key={i} className="flex items-center gap-2 text-xs">
-                                    <span className="w-2 h-2 rounded-full bg-green-500"></span>
+                                <div key={i} className="flex items-center gap-2 text-xs text-gray-400">
+                                    <span className="w-2 h-2 rounded-full bg-green-600"></span>
                                     {u.name || u.username} {u._id === user._id && "(You)"}
                                 </div>
                             ))}
@@ -356,38 +356,39 @@ export default function ProjectPage() {
                 </aside>
 
                 {/* 🧠 CENTER - CODE EDITOR & TERMINAL */}
-                <main className="flex-1 flex flex-col min-w-0 bg-[#0A0A23] relative">
-                    <div className="flex-1 overflow-hidden relative p-1">
+                <main className="flex-1 flex flex-col min-w-0 bg-[#1e1e1e] relative">
+                    <div className="flex-1 overflow-hidden relative">
                         <CodeEditor
                             file={activeFile}
                             onCodeChange={handleCodeChange}
+                            onSave={() => saveFile()}
                         />
                     </div>
 
                     {/* TERMINAL PANEL */}
-                    <div className="h-48 bg-[#0E0E1E] border-t border-jules-border/30 flex flex-col shrink-0">
-                        <div className="flex items-center justify-between px-4 py-1 border-b border-jules-border/30 bg-[#120129]">
-                            <span className="text-xs font-bold uppercase text-jules-muted">Terminal</span>
-                            <button onClick={() => setTerminalOutput("")} className="text-[10px] hover:text-white text-jules-muted">Clear</button>
+                    <div className="h-48 bg-[#1e1e1e] border-t border-[#2b2b2b] flex flex-col shrink-0">
+                        <div className="flex items-center justify-between px-4 py-1 border-b border-[#2b2b2b] bg-[#1e1e1e]">
+                            <span className="text-[11px] font-bold uppercase text-gray-500">Terminal</span>
+                            <button onClick={() => setTerminalOutput("")} className="text-[10px] hover:text-white text-gray-500">Clear</button>
                         </div>
-                        <div className="flex-1 p-3 font-mono text-xs overflow-y-auto whitespace-pre-wrap text-jules-primary/90">
-                            {terminalOutput || <span className="text-jules-muted italic">Ready to run code...</span>}
+                        <div className="flex-1 p-3 font-mono text-xs overflow-y-auto whitespace-pre-wrap text-gray-300">
+                            {terminalOutput || <span className="text-gray-600 italic">Ready to run code...</span>}
                         </div>
                     </div>
                 </main>
 
                 {/* 💬 RIGHT SIDEBAR - CHAT & AI */}
-                <aside className="w-80 border-l border-jules-border/30 bg-[#0E0E1E] flex flex-col shrink-0">
-                    <div className="flex border-b border-jules-border/30">
+                <aside className="w-80 border-l border-[#2b2b2b] bg-[#252526] flex flex-col shrink-0">
+                    <div className="flex border-b border-[#2b2b2b]">
                         <button
                             onClick={() => setRightPanelTab("chat")}
-                            className={`flex-1 py-2 text-xs font-bold uppercase transition-colors ${rightPanelTab === "chat" ? "text-jules-primary border-b-2 border-jules-accent bg-[#0A0A23]" : "text-jules-muted hover:text-white"}`}
+                            className={`flex-1 py-2 text-[11px] font-bold uppercase transition-colors ${rightPanelTab === "chat" ? "text-white border-b-2 border-blue-500 bg-[#1e1e1e]" : "text-gray-500 hover:text-gray-300"}`}
                         >
-                            Team Chat
+                            Chat
                         </button>
                         <button
                             onClick={() => setRightPanelTab("ai")}
-                            className={`flex-1 py-2 text-xs font-bold uppercase transition-colors ${rightPanelTab === "ai" ? "text-jules-primary border-b-2 bg-purple-500/10 border-purple-500" : "text-jules-muted hover:text-white"}`}
+                            className={`flex-1 py-2 text-[11px] font-bold uppercase transition-colors ${rightPanelTab === "ai" ? "text-white border-b-2 border-purple-500 bg-[#1e1e1e]" : "text-gray-500 hover:text-gray-300"}`}
                         >
                             AI Assistant
                         </button>
@@ -398,18 +399,18 @@ export default function ProjectPage() {
                         {/* TEAM CHAT TAB */}
                         {rightPanelTab === "chat" && (
                             <>
-                                <div className="flex-1 overflow-y-auto p-4 space-y-4">
+                                <div className="flex-1 overflow-y-auto p-4 space-y-4 bg-[#1e1e1e]">
                                     {messages.map((m, i) => {
                                         const isMe = m.senderId?._id === user._id || m.senderId === user._id;
                                         const senderName = m.senderId?.username || m.senderId?.name || "User";
                                         return (
                                             <div key={i} className={`flex gap-3 ${isMe ? "flex-row-reverse" : ""}`}>
-                                                <div className={`w-6 h-6 rounded-full text-[10px] flex items-center justify-center font-bold shrink-0 mt-1 ${isMe ? "bg-jules-accent text-jules-bg" : "bg-[#E546CA] text-white"}`}>
+                                                <div className={`w-6 h-6 rounded-full text-[10px] flex items-center justify-center font-bold shrink-0 mt-1 ${isMe ? "bg-blue-600 text-white" : "bg-gray-600 text-white"}`}>
                                                     {senderName.slice(0, 2).toUpperCase()}
                                                 </div>
                                                 <div className={`${isMe ? "text-right" : "text-left"} max-w-[80%]`}>
-                                                    <div className="text-xs font-bold text-jules-muted mb-0.5">{senderName}</div>
-                                                    <div className={`text-sm p-2 rounded-lg border text-jules-primary/90 break-words ${isMe ? "bg-jules-accent/10 border-jules-accent/30 rounded-tr-none" : "bg-[#0A0A23] border-jules-border/30 rounded-tl-none"}`}>
+                                                    <div className="text-[10px] font-bold text-gray-500 mb-0.5">{senderName}</div>
+                                                    <div className={`text-sm px-3 py-2 rounded-lg break-words text-gray-200 ${isMe ? "bg-blue-600/20 border border-blue-600/30 rounded-tr-none" : "bg-[#252526] border border-[#333] rounded-tl-none"}`}>
                                                         {m.content}
                                                     </div>
                                                 </div>
@@ -418,14 +419,14 @@ export default function ProjectPage() {
                                     })}
                                     <div ref={messagesEndRef} />
                                 </div>
-                                <div className="p-3 border-t border-jules-border/30 bg-[#120129]">
+                                <div className="p-3 border-t border-[#2b2b2b] bg-[#252526]">
                                     <input
                                         type="text"
                                         placeholder="Message..."
                                         value={chatText}
                                         onChange={(e) => setChatText(e.target.value)}
                                         onKeyDown={(e) => e.key === 'Enter' && sendMessage()}
-                                        className="w-full bg-[#0A0A23] border border-jules-border/30 rounded px-3 py-2 text-sm text-jules-primary focus:outline-none focus:border-jules-accent"
+                                        className="w-full bg-[#3c3c3c] border border-[#2b2b2b] rounded px-3 py-1.5 text-sm text-white focus:outline-none focus:border-blue-500 placeholder-gray-500"
                                     />
                                 </div>
                             </>
@@ -434,17 +435,17 @@ export default function ProjectPage() {
                         {/* AI ASSISTANT TAB */}
                         {rightPanelTab === "ai" && (
                             <>
-                                <div className="flex-1 overflow-y-auto p-4 space-y-4 bg-purple-900/5">
+                                <div className="flex-1 overflow-y-auto p-4 space-y-4 bg-[#1e1e1e]">
                                     {aiMessages.map((m, i) => {
                                         const isAi = m.role === "assistant";
                                         return (
                                             <div key={i} className={`flex gap-3 ${!isAi ? "flex-row-reverse" : ""}`}>
-                                                <div className={`w-6 h-6 rounded-full text-[10px] flex items-center justify-center font-bold shrink-0 mt-1 ${!isAi ? "bg-jules-accent text-jules-bg" : "bg-purple-500 text-white"}`}>
+                                                <div className={`w-6 h-6 rounded-full text-[10px] flex items-center justify-center font-bold shrink-0 mt-1 ${!isAi ? "bg-blue-600 text-white" : "bg-purple-600 text-white"}`}>
                                                     {isAi ? "AI" : "YOU"}
                                                 </div>
                                                 <div className={`${!isAi ? "text-right" : "text-left"} max-w-[90%]`}>
-                                                    <div className="text-xs font-bold text-jules-muted mb-0.5">{isAi ? "Jules" : "You"}</div>
-                                                    <div className={`text-sm p-2 rounded-lg border text-jules-primary/90 break-words ${!isAi ? "bg-jules-accent/10 border-jules-accent/30 rounded-tr-none" : "bg-[#0A0A23] border-purple-500/30 rounded-tl-none"}`}>
+                                                    <div className="text-[10px] font-bold text-gray-500 mb-0.5">{isAi ? "Jules" : "You"}</div>
+                                                    <div className={`text-sm px-3 py-2 rounded-lg break-words text-gray-200 ${!isAi ? "bg-blue-600/20 border border-blue-600/30 rounded-tr-none" : "bg-[#252526] border border-purple-900/40 rounded-tl-none"}`}>
                                                         <div className="whitespace-pre-wrap">{m.content}</div>
                                                     </div>
                                                 </div>
@@ -453,24 +454,24 @@ export default function ProjectPage() {
                                     })}
                                     {isAiLoading && (
                                         <div className="flex gap-3">
-                                            <div className="w-6 h-6 rounded-full bg-purple-500 text-white text-[10px] flex items-center justify-center font-bold shrink-0 mt-1">AI</div>
-                                            <div className="bg-[#0A0A23] border border-purple-500/30 p-2 rounded-lg rounded-tl-none text-xs text-jules-muted animate-pulse">
+                                            <div className="w-6 h-6 rounded-full bg-purple-600 text-white text-[10px] flex items-center justify-center font-bold shrink-0 mt-1">AI</div>
+                                            <div className="bg-[#252526] border border-purple-500/30 p-2 rounded-lg rounded-tl-none text-xs text-gray-400 animate-pulse">
                                                 Thinking...
                                             </div>
                                         </div>
                                     )}
                                     <div ref={aiMessagesEndRef} />
                                 </div>
-                                <div className="p-3 border-t border-jules-border/30 bg-[#120129]">
+                                <div className="p-3 border-t border-[#2b2b2b] bg-[#252526]">
                                     <input
                                         type="text"
                                         placeholder="Ask Jules about your code..."
                                         value={aiInput}
                                         onChange={(e) => setAiInput(e.target.value)}
                                         onKeyDown={(e) => e.key === 'Enter' && handleAskAI()}
-                                        className="w-full bg-[#0A0A23] border border-purple-500/30 rounded px-3 py-2 text-sm text-jules-primary focus:outline-none focus:border-purple-500"
+                                        className="w-full bg-[#3c3c3c] border border-purple-500/30 rounded px-3 py-1.5 text-sm text-white focus:outline-none focus:border-purple-500 placeholder-gray-500"
                                     />
-                                    <div className="text-[10px] text-zinc-500 mt-1 text-center">
+                                    <div className="text-[10px] text-gray-600 mt-1 text-center">
                                         Context: {activeFile ? activeFile.name : "None"}
                                     </div>
                                 </div>

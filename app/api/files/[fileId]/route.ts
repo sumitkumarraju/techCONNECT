@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import connectDB from '@/lib/db';
 import CodeFile from '@/models/CodeFile';
+import Project from '@/models/Project';
 import jwt from 'jsonwebtoken';
 
 export const dynamic = 'force-dynamic';
@@ -41,6 +42,19 @@ export async function PUT(req: NextRequest, { params }: { params: { fileId: stri
 
         const { name, content, language } = await req.json();
 
+        // Check Permissions
+        const existingFile = await CodeFile.findById(params.fileId);
+        if (!existingFile) return NextResponse.json({ message: "File not found" }, { status: 404 });
+
+        const project = await Project.findById(existingFile.projectId);
+        if (project) {
+            const isOwner = project.ownerId.toString() === userId;
+            const isMember = project.members.some((m: any) => m.toString() === userId);
+            if (!isOwner && !isMember) {
+                return NextResponse.json({ message: "Not authorized" }, { status: 403 });
+            }
+        }
+
         const updateData: any = {};
         if (name) updateData.name = name;
         if (content !== undefined) updateData.content = content;
@@ -66,6 +80,19 @@ export async function DELETE(req: NextRequest, { params }: { params: { fileId: s
         await connectDB();
         const userId = getDataFromToken(req);
         if (!userId) return NextResponse.json({ message: "Not authorized" }, { status: 401 });
+
+        const existingFile = await CodeFile.findById(params.fileId);
+        if (!existingFile) return NextResponse.json({ message: "File not found" }, { status: 404 });
+
+        // Check permissions
+        const project = await Project.findById(existingFile.projectId);
+        if (project) {
+            const isOwner = project.ownerId.toString() === userId;
+            const isMember = project.members.some((m: any) => m.toString() === userId);
+            if (!isOwner && !isMember) {
+                return NextResponse.json({ message: "Not authorized" }, { status: 403 });
+            }
+        }
 
         await CodeFile.findByIdAndDelete(params.fileId);
 
