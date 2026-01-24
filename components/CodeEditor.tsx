@@ -148,4 +148,7 @@ const CodeEditor = forwardRef<CodeEditorHandle, CodeEditorProps>(({ file, onCode
             </div>
         </div>
     );
-}
+});
+
+CodeEditor.displayName = "CodeEditor";
+export default CodeEditor;
