@@ -60,8 +60,9 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       const token = localStorage.getItem("token");
       if (!token) throw new Error("No token");
       const { data } = await API.get("/auth/me");
-      setUser({ ...data, token }); // Ensure token is part of user object if needed
-    } catch {
+      setUser({ ...data, token });
+    } catch (error) {
+      console.warn("Auth check failed, logging out...", error);
       logout();
     } finally {
       setLoading(false);

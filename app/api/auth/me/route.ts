@@ -25,6 +25,9 @@ export async function GET(req: NextRequest) {
         }
 
         const user = await User.findById(userId).select("-passwordHash");
+        if (!user) {
+            return NextResponse.json({ message: "User not found" }, { status: 404 });
+        }
         return NextResponse.json(user);
     } catch (error: any) {
         return NextResponse.json({ message: error.message }, { status: 500 });

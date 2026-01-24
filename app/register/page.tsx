@@ -3,6 +3,8 @@ import React, { useState } from "react";
 import { useRouter } from "next/navigation";
 import Link from 'next/link';
 
+import { useAuth } from '@/context/AuthContext';
+
 export default function Register() {
   const [name, setName] = useState('');
   const [username, setUsername] = useState('');
@@ -10,21 +12,27 @@ export default function Register() {
   const [password, setPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
   const router = useRouter();
+  const { register } = useAuth();
+  const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState('');
 
   const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
+    setIsLoading(true);
+    setError('');
+
     try {
-      const res = await fetch('/api/auth/register', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ name, username, email, password }),
-      });
-      const data = await res.json();
-      if (!res.ok) throw new Error(data.message);
-      router.push('/login');
+      const res = await register({ name, username, email, password });
+
+      if (res.success) {
+        router.push('/dashboard'); // Or login, depending on desired flow. Context usually logs them in.
+      } else {
+        setError(res.error || 'Registration failed');
+      }
     } catch (err: any) {
-      setError(err.message);
+      setError(err.message || 'An unexpected error occurred');
+    } finally {
+      setIsLoading(false);
     }
   };
 
@@ -150,8 +158,8 @@ export default function Register() {
                 </button>
               </div>
 
-              <button type="submit" className="w-full bg-jules-primary text-black font-semibold py-3 rounded-full hover:bg-white transition-all transform hover:scale-[1.02] active:scale-[0.98] shadow-[0_0_20px_rgba(255,255,255,0.1)]">
-                Sign Up Free
+              <button type="submit" disabled={isLoading} className="w-full bg-jules-primary text-black font-semibold py-3 rounded-full hover:bg-white transition-all transform hover:scale-[1.02] active:scale-[0.98] shadow-[0_0_20px_rgba(255,255,255,0.1)] disabled:opacity-70 disabled:cursor-not-allowed">
+                {isLoading ? 'Creating Account...' : 'Sign Up Free'}
               </button>
             </form>
 

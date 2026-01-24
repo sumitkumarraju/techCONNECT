@@ -11,7 +11,9 @@ export async function POST(req: NextRequest) {
         await connectDB();
         const { email, password } = await req.json();
 
-        const user = await User.findOne({ email });
+        const user = await User.findOne({
+            $or: [{ email: email }, { username: email }]
+        });
 
         if (!user) {
             return NextResponse.json({ message: "Invalid credentials" }, { status: 401 });
