@@ -45,6 +45,7 @@ export async function POST(req: NextRequest) {
             token
         }, { status: 201 });
     } catch (error: any) {
+        console.error("Register Error:", error);
         return NextResponse.json({ message: error.message }, { status: 500 });
     }
 }
