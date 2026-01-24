@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useRef, useEffect } from "react";
+import React, { useRef, useEffect, useImperativeHandle, forwardRef } from "react";
 import Editor, { OnMount } from "@monaco-editor/react";
 import socket from "@/lib/socket";
 
@@ -10,9 +10,26 @@ interface CodeEditorProps {
     onSave?: () => void;
 }
 
-export default function CodeEditor({ file, onCodeChange, onSave }: CodeEditorProps) {
+export interface CodeEditorHandle {
+    insertCode: (text: string) => void;
+}
+
+const CodeEditor = forwardRef<CodeEditorHandle, CodeEditorProps>(({ file, onCodeChange, onSave }, ref) => {
     const editorRef = useRef<any>(null);
     const isRemoteUpdate = useRef(false);
+
+    useImperativeHandle(ref, () => ({
+        insertCode: (text: string) => {
+            if (editorRef.current) {
+                const editor = editorRef.current;
+                const selection = editor.getSelection();
+                // const id = { major: 1, minor: 1 }; // Not strictly needed for executeEdits
+                const op = { range: selection, text: text, forceMoveMarkers: true };
+                editor.executeEdits("my-source", [op]);
+                editor.focus();
+            }
+        }
+    }));
 
     const handleEditorDidMount: OnMount = (editor, monaco) => {
         editorRef.current = editor;
@@ -107,7 +124,7 @@ export default function CodeEditor({ file, onCodeChange, onSave }: CodeEditorPro
                 <Editor
                     height="100%"
                     language={file.language || 'javascript'}
-                    value={file.content} // Controlled value from parent potentially? No, using setValue. 
+                    // value={file.content} // Controlled value from parent potentially? No, using setValue. 
                     // Actually, if we pass `value` prop, it becomes controlled. 
                     // To use setValue manually, better to use `defaultValue` or let `useEffect` handle it.
                     // But Monaco `value` prop is safe if we ignore echo.

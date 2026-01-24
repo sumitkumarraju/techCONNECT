@@ -6,11 +6,47 @@ import Link from "next/link";
 import { useAuth } from "@/context/AuthContext";
 import API from "@/lib/api";
 import socket from "@/lib/socket";
-import CodeEditor from "@/components/CodeEditor";
+import CodeEditor, { CodeEditorHandle } from "@/components/CodeEditor";
+
+// Helper to parse markdown code blocks
+const ParsedAIMessage = ({ content, onInsert }: { content: string, onInsert: (code: string) => void }) => {
+    const parts = content.split(/(```[\s\S]*?```)/g);
+    return (
+        <div className="whitespace-pre-wrap">
+            {parts.map((part, i) => {
+                const match = part.match(/```(\w*)\n([\s\S]*?)```/);
+                if (match) {
+                    const lang = match[1];
+                    const code = match[2];
+                    return (
+                        <div key={i} className="my-2 rounded overflow-hidden border border-[#333]">
+                            <div className="bg-[#2d2d2d] px-3 py-1 text-xs flex justify-between items-center text-gray-400">
+                                <span className="uppercase font-bold">{lang || "code"}</span>
+                                <button
+                                    onClick={() => onInsert(code)}
+                                    className="hover:text-white bg-blue-600/20 hover:bg-blue-600/40 text-blue-400 px-2 py-0.5 rounded transition-colors flex items-center gap-1"
+                                >
+                                    <span>↦</span> Insert
+                                </button>
+                            </div>
+                            <div className="bg-[#1e1e1e] p-3 text-xs overflow-x-auto">
+                                <code>{code}</code>
+                            </div>
+                        </div>
+                    );
+                }
+                return <span key={i}>{part}</span>;
+            })}
+        </div>
+    );
+};
 
 export default function ProjectPage() {
     const { id: projectId } = useParams() as { id: string };
     const { user } = useAuth();
+
+    // Editor Ref for AI Insertion
+    const editorRef = useRef<CodeEditorHandle>(null);
 
     // Data State
     const [project, setProject] = useState<any>(null);
@@ -28,6 +64,7 @@ export default function ProjectPage() {
     // AI State
     const [aiMessages, setAiMessages] = useState<any[]>([{ role: "assistant", content: "Hello! I'm Jules, your AI coding assistant. How can I help you with your code today?" }]);
     const [aiInput, setAiInput] = useState("");
+    const [aiModel, setAiModel] = useState("gpt-3.5-turbo");
     const [isAiLoading, setIsAiLoading] = useState(false);
 
     const messagesEndRef = useRef<HTMLDivElement>(null);
@@ -211,7 +248,8 @@ export default function ProjectPage() {
         try {
             const { data } = await API.post("/ai", {
                 message,
-                context: activeFile?.content || ""
+                context: activeFile?.content || "",
+                model: aiModel
             });
 
             setAiMessages(prev => [...prev, { role: "assistant", content: data.reply }]);
@@ -359,6 +397,7 @@ export default function ProjectPage() {
                 <main className="flex-1 flex flex-col min-w-0 bg-[#1e1e1e] relative">
                     <div className="flex-1 overflow-hidden relative">
                         <CodeEditor
+                            ref={editorRef}
                             file={activeFile}
                             onCodeChange={handleCodeChange}
                             onSave={() => saveFile()}
@@ -435,6 +474,18 @@ export default function ProjectPage() {
                         {/* AI ASSISTANT TAB */}
                         {rightPanelTab === "ai" && (
                             <>
+                                <div className="p-2 border-b border-[#2b2b2b] bg-[#1e1e1e]">
+                                    <select
+                                        value={aiModel}
+                                        onChange={(e) => setAiModel(e.target.value)}
+                                        className="w-full bg-[#3c3c3c] text-xs text-white border border-[#2b2b2b] rounded px-2 py-1 focus:outline-none"
+                                    >
+                                        <option value="gpt-4o">GPT-4o (Smartest)</option>
+                                        <option value="gpt-4-turbo">GPT-4 Turbo</option>
+                                        <option value="gpt-3.5-turbo">GPT-3.5 Turbo (Fast)</option>
+                                    </select>
+                                </div>
+
                                 <div className="flex-1 overflow-y-auto p-4 space-y-4 bg-[#1e1e1e]">
                                     {aiMessages.map((m, i) => {
                                         const isAi = m.role === "assistant";
@@ -446,7 +497,14 @@ export default function ProjectPage() {
                                                 <div className={`${!isAi ? "text-right" : "text-left"} max-w-[90%]`}>
                                                     <div className="text-[10px] font-bold text-gray-500 mb-0.5">{isAi ? "Jules" : "You"}</div>
                                                     <div className={`text-sm px-3 py-2 rounded-lg break-words text-gray-200 ${!isAi ? "bg-blue-600/20 border border-blue-600/30 rounded-tr-none" : "bg-[#252526] border border-purple-900/40 rounded-tl-none"}`}>
-                                                        <div className="whitespace-pre-wrap">{m.content}</div>
+                                                        {isAi ? (
+                                                            <ParsedAIMessage
+                                                                content={m.content}
+                                                                onInsert={(code) => editorRef.current?.insertCode(code)}
+                                                            />
+                                                        ) : (
+                                                            <div className="whitespace-pre-wrap">{m.content}</div>
+                                                        )}
                                                     </div>
                                                 </div>
                                             </div>

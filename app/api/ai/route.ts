@@ -1,41 +1,42 @@
 import { NextRequest, NextResponse } from "next/server";
-import { GoogleGenerativeAI } from "@google/generative-ai";
+import OpenAI from "openai";
 
 export async function POST(req: NextRequest) {
     try {
-        const { message, context } = await req.json();
-        const apiKey = process.env.GEMINI_API_KEY;
+        const { message, context, model } = await req.json();
+        const apiKey = process.env.OPENAI_API_KEY;
 
         if (!apiKey) {
             // Mock Response if no key
             return NextResponse.json({
-                reply: "I am ready to help! To enable real AI responses, please add a `GEMINI_API_KEY` to your .env file.\n\nFor now, I can see you are asking: \"" + message + "\""
+                reply: `[MOCK MODE: No OPENAI_API_KEY found]\n\nI see you are asking: "${message}"\n\nTo get real answers using ${model || 'GPT'}, please add your API Key to .env.`
             });
         }
 
-        const genAI = new GoogleGenerativeAI(apiKey);
-        const model = genAI.getGenerativeModel({ model: "gemini-1.5-flash" });
+        const openai = new OpenAI({ apiKey });
 
-        const prompt = `
-You are an expert coding assistant named "Jules" for the TechConnect platform.
-You are helpful, concise, and expert in JavaScript, TypeScript, Python, and Web Development.
+        const selectedModel = model || "gpt-3.5-turbo";
 
-CONTEXT (The user's current file):
-\`\`\`
-${context || "// No file selected or empty"}
-\`\`\`
+        const systemPrompt = `You are "Jules", an expert AI coding assistant for TechConnect. 
+        You are helpful, concise, and expert in JavaScript, TypeScript, Python, and Web Development.
+        
+        CONTEXT (User's current code):
+        \`\`\`
+        ${context || "// No file selected"}
+        \`\`\`
+        `;
 
-USER QUESTION:
-${message}
+        const completion = await openai.chat.completions.create({
+            model: selectedModel,
+            messages: [
+                { role: "system", content: systemPrompt },
+                { role: "user", content: message }
+            ],
+        });
 
-Please provide a helpful, code-centric answer. If you provide code, wrap it in markdown code blocks.
-`;
-
-        const result = await model.generateContent(prompt);
-        const response = await result.response;
-        const text = response.text();
-
-        return NextResponse.json({ reply: text });
+        return NextResponse.json({
+            reply: completion.choices[0].message.content
+        });
 
     } catch (error: any) {
         console.error("AI API Error:", error);
