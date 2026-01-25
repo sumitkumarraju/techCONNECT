@@ -4,6 +4,8 @@ import Discussion from "@/models/Discussion";
 import jwt from 'jsonwebtoken';
 import { discussionSchema } from "@/lib/validations";
 
+export const dynamic = 'force-dynamic';
+
 const getDataFromToken = (req: NextRequest) => {
     try {
         const token = req.headers.get("Authorization")?.split(" ")[1];

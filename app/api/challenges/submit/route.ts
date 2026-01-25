@@ -9,6 +9,8 @@ import util from 'util';
 import jwt from 'jsonwebtoken';
 import { submissionSchema } from "@/lib/validations";
 
+export const dynamic = 'force-dynamic';
+
 const execPromise = util.promisify(exec);
 
 const getDataFromToken = (req: NextRequest) => {

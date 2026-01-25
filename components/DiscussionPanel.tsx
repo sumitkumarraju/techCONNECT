@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import API from "@/lib/api";
 
 interface DiscussionPanelProps {
@@ -19,12 +19,7 @@ export default function DiscussionPanel({ projectId, user }: DiscussionPanelProp
     const [commentText, setCommentText] = useState("");
     const [isCreating, setIsCreating] = useState(false);
 
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-    useEffect(() => {
-        if (view === "list") fetchDiscussions();
-    }, [view, projectId]);
-
-    const fetchDiscussions = async () => {
+    const fetchDiscussions = useCallback(async () => {
         setIsLoading(true);
         try {
             const { data } = await API.get(`/discussions?projectId=${projectId}`);
@@ -34,7 +29,11 @@ export default function DiscussionPanel({ projectId, user }: DiscussionPanelProp
         } finally {
             setIsLoading(false);
         }
-    };
+    }, [projectId]);
+
+    useEffect(() => {
+        if (view === "list") fetchDiscussions();
+    }, [view, fetchDiscussions]);
 
     const fetchDiscussionDetail = async (id: string) => {
         setIsLoading(true);
