@@ -5,14 +5,15 @@ import jwt, { JwtPayload } from 'jsonwebtoken';
 import { profileUpdateSchema } from "@/lib/validations";
 import { ApiError, handleApiError } from '@/lib/api-error';
 
-const JWT_SECRET = process.env.JWT_SECRET || 'secret-key';
+const JWT_SECRET = process.env.JWT_SECRET || 'devsecret';
 
 function getUserFromToken(req: Request) {
   const authHeader = req.headers.get('authorization');
   if (!authHeader) return null;
   const token = authHeader.split(' ')[1];
   try {
-    return jwt.verify(token, JWT_SECRET) as JwtPayload;
+    const decoded = jwt.verify(token, JWT_SECRET) as JwtPayload;
+    return { userId: decoded.id }; // Map 'id' from token to 'userId' for internal use
   } catch (e) {
     return null;
   }

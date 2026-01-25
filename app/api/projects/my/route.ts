@@ -25,7 +25,10 @@ export async function GET(req: NextRequest) {
         }
 
         const projects = await Project.find({
-            members: userId
+            $or: [
+                { ownerId: userId },
+                { "members.userId": userId }
+            ]
         }).sort({ updatedAt: -1 });
 
         return NextResponse.json(projects);
