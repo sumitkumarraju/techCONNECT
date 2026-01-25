@@ -41,6 +41,39 @@ const CodeEditor = forwardRef<CodeEditorHandle, CodeEditorProps>(({ file, onCode
             }
         });
 
+        // Emit Cursor Position
+        editor.onDidChangeCursorPosition((e) => {
+            if (file) {
+                socket.emit("cursor-move", {
+                    projectId: file.projectId,
+                    cursor: {
+                        line: e.position.lineNumber,
+                        column: e.position.column,
+                    },
+                });
+            }
+        });
+
+        // Listen for remote cursors
+        socket.on("cursor-update", ({ socketId, cursor }) => {
+            // Visualize cursor using markers (as requested)
+            // Note: For a richer experience, deltaDecorations with CSS is preferred, 
+            // but markers are a quick way to show "presence" logic working.
+            const model = editor.getModel();
+            if (model) {
+                monaco.editor.setModelMarkers(model, `cursor-${socketId}`, [
+                    {
+                        startLineNumber: cursor.line,
+                        startColumn: cursor.column,
+                        endLineNumber: cursor.line,
+                        endColumn: cursor.column + 1,
+                        message: `User ${socketId.substring(0, 4)}`, // Basic ID display
+                        severity: monaco.MarkerSeverity.Info,
+                    },
+                ]);
+            }
+        });
+
         // Listen for code updates from other users
         socket.on("code-update", ({ fileId, content }: { fileId: string; content: string }) => {
             // Only update if this event is for the CURRENTLY open file
@@ -97,6 +130,7 @@ const CodeEditor = forwardRef<CodeEditorHandle, CodeEditorProps>(({ file, onCode
     useEffect(() => {
         return () => {
             socket.off("code-update");
+            socket.off("cursor-update");
         };
     }, []);
 

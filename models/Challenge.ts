@@ -5,7 +5,15 @@ const ChallengeSchema = new mongoose.Schema({
     description: { type: String, required: true },
 
     difficulty: { type: String, enum: ['easy', 'medium', 'hard'], required: true },
+    points: { type: Number, required: true },
     tags: [{ type: String }],
+
+    starterCode: { type: String, default: "" },
+    testCases: [{
+        input: { type: String, required: true },
+        output: { type: String, required: true },
+        isHidden: { type: Boolean, default: false }
+    }],
 
     createdBy: { type: mongoose.Schema.Types.ObjectId, ref: 'User', required: true },
 }, { timestamps: true });

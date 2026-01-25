@@ -3,17 +3,25 @@ import connectDB from '@/lib/db';
 import User from '@/models/User';
 import bcrypt from 'bcryptjs';
 import jwt from 'jsonwebtoken';
+import { registerSchema } from '@/lib/validations';
 
 export const dynamic = 'force-dynamic';
 
 export async function POST(req: NextRequest) {
     try {
         await connectDB();
-        const { name, username, email, password } = await req.json();
+        const body = await req.json();
 
-        if (!name || !username || !email || !password) {
-            return NextResponse.json({ message: "All fields are required" }, { status: 400 });
+        // Validate input
+        const validation = registerSchema.safeParse(body);
+        if (!validation.success) {
+            return NextResponse.json({
+                message: "Validation Error",
+                errors: validation.error.format()
+            }, { status: 400 });
         }
+
+        const { name, username, email, password } = validation.data;
 
         const userExists = await User.findOne({
             $or: [{ email }, { username }]

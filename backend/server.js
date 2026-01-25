@@ -4,8 +4,24 @@ const { Server } = require("socket.io");
 const cors = require("cors");
 require("dotenv").config();
 
+const helmet = require("helmet");
+const compression = require("compression");
+const rateLimit = require("express-rate-limit");
+const jwt = require("jsonwebtoken");
+
 const app = express();
+
+// Security Middleware
+app.use(helmet());
+app.use(compression());
 app.use(cors());
+
+// Rate Limiting
+const limiter = rateLimit({
+    windowMs: 15 * 60 * 1000, // 15 minutes
+    max: 100 // limit each IP to 100 requests per windowMs
+});
+app.use(limiter);
 
 const server = http.createServer(app);
 
@@ -16,23 +32,45 @@ const io = new Server(server, {
     },
 });
 
+// Socket Auth Middleware
+io.use((socket, next) => {
+    const token = socket.handshake.auth.token;
+    if (!token) {
+        return next(new Error("Authentication error"));
+    }
+    jwt.verify(token, process.env.JWT_SECRET || 'devsecret', (err, decoded) => {
+        if (err) return next(new Error("Authentication error"));
+        socket.decoded = decoded;
+        next();
+    });
+});
+
+// Presence State
+const projectUsers = new Map(); // projectId -> [{ socketId, ...user }]
+
 io.on("connection", (socket) => {
-    console.log(`User Connected: ${socket.id}`);
+    // Join Project & Presence
+    socket.on("user-join", ({ projectId, user }) => {
+        socket.join(projectId);
+        console.log(`User ${user.name} joined project: ${projectId}`);
 
-    // Join Project Room
-    socket.on("join-project", (data) => {
-        // data: { projectId, user: { _id, name, ... } }
-        socket.join(data.projectId);
-        console.log(`User ${data.user.username} joined project: ${data.projectId}`);
+        if (!projectUsers.has(projectId)) {
+            projectUsers.set(projectId, []);
+        }
 
-        // Update online users list (simplified for MVP)
-        // For a real app, track users per room in a Map/Redis
-        const room = io.sockets.adapter.rooms.get(data.projectId);
-        const numClients = room ? room.size : 0;
+        const users = projectUsers.get(projectId);
+        // Avoid duplicates if using same socket (re-join)
+        const existingIdx = users.findIndex(u => u.socketId === socket.id);
+        if (existingIdx !== -1) {
+            users[existingIdx] = { ...user, socketId: socket.id };
+        } else {
+            users.push({ ...user, socketId: socket.id });
+        }
 
-        // Broadcast to room that someone joined
-        // Ideally we send the full list of users, but for now just count/notification
-        // io.to(data.projectId).emit("online-users", Array.from(room)); 
+        projectUsers.set(projectId, users);
+
+        // Broadcast presence
+        io.to(projectId).emit("presence-update", users);
     });
 
     socket.on("file-open", ({ projectId, fileId }) => {
@@ -47,6 +85,19 @@ io.on("connection", (socket) => {
         });
     });
 
+    // Cursor Movement
+    socket.on("cursor-move", ({ projectId, cursor }) => {
+        socket.to(projectId).emit("cursor-update", {
+            socketId: socket.id,
+            cursor,
+        });
+    });
+
+    // Typing Indicator
+    socket.on("typing", ({ projectId, userId }) => {
+        socket.to(projectId).emit("user-typing", userId);
+    });
+
     // Chat Message
     socket.on("send-message", ({ projectId, message }) => {
         socket.to(projectId).emit("receive-message", message);
@@ -59,6 +110,14 @@ io.on("connection", (socket) => {
 
     socket.on("disconnect", () => {
         console.log("User Disconnected", socket.id);
+        // Cleanup presence
+        for (const [projectId, users] of projectUsers.entries()) {
+            const updated = users.filter(u => u.socketId !== socket.id);
+            if (updated.length !== users.length) {
+                projectUsers.set(projectId, updated);
+                io.to(projectId).emit("presence-update", updated);
+            }
+        }
     });
 });
 

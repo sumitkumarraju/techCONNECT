@@ -1,11 +1,11 @@
-import axios from "axios";
+import axios, { InternalAxiosRequestConfig } from "axios";
 
 const API = axios.create({
     baseURL: "/api"
 });
 
 // Attach token automatically
-API.interceptors.request.use((req) => {
+API.interceptors.request.use((req: InternalAxiosRequestConfig) => {
     if (typeof window !== 'undefined') {
         const token = localStorage.getItem("token");
         if (token) {

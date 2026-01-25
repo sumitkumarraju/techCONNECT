@@ -6,7 +6,18 @@ import Link from "next/link";
 import { useAuth } from "@/context/AuthContext";
 import API from "@/lib/api";
 import socket from "@/lib/socket";
-import CodeEditor, { CodeEditorHandle } from "@/components/CodeEditor";
+import dynamic from "next/dynamic";
+import { CodeEditorHandle } from "@/components/CodeEditor"; // Keep type import
+import InviteModal from "@/components/InviteModal";
+
+// Dynamic Imports with Lazy Loading
+const CodeEditor = dynamic(() => import("@/components/CodeEditor"), {
+    ssr: false,
+    loading: () => <div className="flex items-center justify-center h-full text-gray-500 text-sm">Loading Editor...</div>
+});
+const OnlineUsers = dynamic(() => import("@/components/OnlineUsers"), { ssr: false });
+const VersionHistory = dynamic(() => import("@/components/VersionHistory"), { ssr: false });
+const DiscussionPanel = dynamic(() => import("@/components/DiscussionPanel"), { ssr: false });
 
 // Helper to parse markdown code blocks
 const ParsedAIMessage = ({ content, onInsert }: { content: string, onInsert: (code: string) => void }) => {
@@ -53,10 +64,22 @@ export default function ProjectPage() {
     const [files, setFiles] = useState<any[]>([]);
     const [activeFile, setActiveFile] = useState<any>(null);
     const [messages, setMessages] = useState<any[]>([]);
+
+    // Presence State
     const [onlineUsers, setOnlineUsers] = useState<any[]>([]);
+    const [typingUser, setTypingUser] = useState<string | null>(null);
+
+    // Permission State
+    const [myRole, setMyRole] = useState<"owner" | "editor" | "viewer">("viewer");
+    const [showInviteModal, setShowInviteModal] = useState(false);
+
+    // Version State
+    const [versions, setVersions] = useState<any[]>([]);
+    const [isVersionsLoading, setIsVersionsLoading] = useState(false);
+    const [activeVersionId, setActiveVersionId] = useState<string | null>(null);
 
     // UI State
-    const [rightPanelTab, setRightPanelTab] = useState<"chat" | "ai">("chat");
+    const [rightPanelTab, setRightPanelTab] = useState<"chat" | "ai" | "versions" | "discuss">("chat");
     const [chatText, setChatText] = useState("");
     const [isCreatingFile, setIsCreatingFile] = useState(false);
     const [newFileName, setNewFileName] = useState("");
@@ -70,7 +93,7 @@ export default function ProjectPage() {
     const messagesEndRef = useRef<HTMLDivElement>(null);
     const aiMessagesEndRef = useRef<HTMLDivElement>(null);
 
-    // Initial Data Fetch
+    // Initial Data Fetch & Socket
     useEffect(() => {
         if (!user || !projectId) return;
 
@@ -85,6 +108,16 @@ export default function ProjectPage() {
                 setFiles(filesRes.data);
                 setMessages(msgsRes.data);
 
+                // Determine Role
+                if (projRes.data.ownerId === user._id) {
+                    setMyRole("owner");
+                } else {
+                    const member = projRes.data.members?.find((m: any) => m.userId === user._id);
+                    setMyRole(member ? member.role : "viewer"); // Default to viewer if not found? Or handle access denied?
+                    // Note: Ideally the API shouldn't return the project if no access, but assuming we have public projects:
+                    // If public and not member -> viewer.
+                }
+
                 // Open first file by default if exists
                 if (filesRes.data.length > 0) {
                     fetchFileContent(filesRes.data[0]._id);
@@ -97,25 +130,45 @@ export default function ProjectPage() {
 
         // Socket Connect
         socket.connect();
-        socket.emit("join-project", {
+
+        // Random Color for Presence
+        const colors = ["#ef4444", "#f97316", "#f59e0b", "#84cc16", "#10b981", "#06b6d4", "#3b82f6", "#8b5cf6", "#d946ef", "#f43f5e"];
+        const randomColor = colors[Math.floor(Math.random() * colors.length)];
+
+        // Emit JOIN (Presence)
+        socket.emit("user-join", {
             projectId,
-            user: { username: user.username, name: user.name, _id: user._id }
+            user: {
+                _id: user._id, // Add ID for uniqueness
+                username: user.username,
+                name: user.name,
+                color: randomColor
+            }
         });
 
-        // Event Listeners (Chat & Presence only for now)
+        // Event Listeners (Chat & Presence)
         const handleReceiveMessage = (message: any) => {
             setMessages(prev => [...prev, message]);
         };
-        const handleOnlineUsers = (users: any[]) => {
+        const handlePresenceUpdate = (users: any[]) => {
             setOnlineUsers(users);
+        };
+        const handleUserTyping = (userId: string) => {
+            if (userId !== user._id) {
+                setTypingUser(userId);
+                // Clear after 2 seconds
+                setTimeout(() => setTypingUser(null), 2000);
+            }
         };
 
         socket.on("receive-message", handleReceiveMessage);
-        socket.on("online-users", handleOnlineUsers);
+        socket.on("presence-update", handlePresenceUpdate);
+        socket.on("user-typing", handleUserTyping);
 
         return () => {
             socket.off("receive-message", handleReceiveMessage);
-            socket.off("online-users", handleOnlineUsers);
+            socket.off("presence-update", handlePresenceUpdate);
+            socket.off("user-typing", handleUserTyping);
             socket.disconnect();
         };
     }, [projectId, user]);
@@ -123,13 +176,6 @@ export default function ProjectPage() {
     // Fetch full file content when selected
     const fetchFileContent = async (fileId: string) => {
         try {
-            // Join Socket Room for this file
-            if (activeFile && activeFile._id !== fileId) {
-                // Ideally leave previous room, but socket.io handles multi-room fine.
-                // We'll rely on joining the new room.
-            }
-            // socket.emit("join-file", fileId); // REMOVED: Using project-scoped rooms now
-
             const { data } = await API.get(`/files/${fileId}`);
             setActiveFile(data);
         } catch (error) {
@@ -140,6 +186,7 @@ export default function ProjectPage() {
     // File Operations
     const handleCreateFile = async (e: React.FormEvent) => {
         e.preventDefault();
+        if (myRole === "viewer") return alert("Viewers cannot create files.");
         if (!newFileName) return;
 
         try {
@@ -163,6 +210,7 @@ export default function ProjectPage() {
     };
 
     const handleDeleteFile = async (fileId: string) => {
+        if (myRole === "viewer") return alert("Viewers cannot delete files.");
         if (!confirm("Are you sure you want to delete this file?")) return;
         try {
             await API.delete(`/files/${fileId}`);
@@ -195,6 +243,7 @@ export default function ProjectPage() {
 
     // Save File
     const saveFile = async (dataToSave?: string) => {
+        if (myRole === "viewer") return; // Silent fail or toast?
         if (!activeFile) return;
         const content = dataToSave !== undefined ? dataToSave : activeFile.content;
 
@@ -206,7 +255,69 @@ export default function ProjectPage() {
             console.error("Failed to save", error);
             setSaveStatus("unsaved");
         }
+    }
+
+
+    // Version History Logic
+    const handleFetchVersions = async () => {
+        if (!activeFile) return;
+        setIsVersionsLoading(true);
+        try {
+            const { data } = await API.get(`/files/version?fileId=${activeFile._id}`);
+            setVersions(data);
+        } catch (error) {
+            console.error("Failed to fetch versions", error);
+        } finally {
+            setIsVersionsLoading(false);
+        }
     };
+
+    const handleRestoreVersion = async (versionId: string) => {
+        if (!activeFile) return;
+        try {
+            const { data } = await API.post("/files/restore", {
+                fileId: activeFile._id,
+                versionId
+            });
+            // Update local state immediately
+            setActiveFile((prev: any) => ({ ...prev, content: data.content }));
+
+            // Re-fetch versions to maybe show a new snapshot if we decided to create one implies restore
+            handleFetchVersions();
+
+            // Notify others via socket (optional but good)
+            if (socket) {
+                socket.emit("file-update", { fileId: activeFile._id, content: data.content });
+            }
+
+        } catch (error) {
+            console.error("Failed to restore", error);
+            alert("Failed to restore version");
+        }
+    };
+
+    // Auto-save a version on manual save (optional logic, enabling for better experience)
+    const handleSaveVersion = async () => {
+        if (!activeFile || !user) return;
+        try {
+            await API.post("/files/version", {
+                fileId: activeFile._id,
+                projectId,
+                content: activeFile.content,
+                userId: user._id
+            });
+            handleFetchVersions(); // Refresh list
+        } catch (error) {
+            console.error("Failed to save snapshot", error);
+        }
+    };
+
+    useEffect(() => {
+        if (rightPanelTab === "versions") {
+            handleFetchVersions();
+        }
+    }, [rightPanelTab, activeFile]);
+
 
     // Run Code
     const [isRunning, setIsRunning] = useState(false);
@@ -272,20 +383,24 @@ export default function ProjectPage() {
         setChatText("");
 
         try {
-            await API.post(`/projects/${projectId}/messages`, { content });
-            socket.emit("send-message", {
-                projectId,
-                message: {
-                    content,
-                    senderId: { _id: user._id, username: user.username, name: user.name },
-                    createdAt: new Date().toISOString()
-                }
-            });
-            setMessages(prev => [...prev, {
+            // Optimistic update
+            const tempMsg = {
                 content,
                 senderId: { _id: user._id, username: user.username, name: user.name },
                 createdAt: new Date().toISOString()
-            }]);
+            };
+            setMessages(prev => [...prev, tempMsg]);
+
+            await API.post(`/projects/${projectId}/messages`, { content });
+
+            socket.emit("send-message", {
+                projectId,
+                message: tempMsg
+            });
+
+            // Emit TYPING
+            socket.emit("typing", { projectId, userId: user._id });
+
         } catch (error) {
             console.error("Failed to send message", error);
         }
@@ -305,9 +420,17 @@ export default function ProjectPage() {
                     <div className="flex flex-col">
                         <h1 className="font-bold text-sm leading-tight">{project?.name || "Loading Project..."}</h1>
                         <div className="text-[10px] text-jules-muted flex items-center gap-2">
-                            {project?.isPublic ? "Public" : "Private"} • {onlineUsers.length} Online
+                            {project?.isPublic ? "Public" : "Private"}
                         </div>
                     </div>
+                </div>
+
+                {/* CENTER: Online Users */}
+                <div className="flex-1 flex justify-center items-center">
+                    <OnlineUsers users={onlineUsers} />
+                    {typingUser && (
+                        <span className="text-[10px] text-blue-400 animate-pulse font-bold tracking-wide">SOMEONE IS TYPING...</span>
+                    )}
                 </div>
 
                 <div className="flex items-center gap-3">
@@ -319,7 +442,7 @@ export default function ProjectPage() {
                         {isRunning ? "Running..." : "▶ Run"}
                     </button>
 
-                    <button onClick={() => saveFile()} className="text-xs bg-jules-accent text-jules-bg px-3 py-1 font-bold rounded hover:opacity-90 min-w-[60px]">
+                    <button onClick={() => { saveFile(); handleSaveVersion(); }} className="text-xs bg-jules-accent text-jules-bg px-3 py-1 font-bold rounded hover:opacity-90 min-w-[60px]">
                         {saveStatus === "saving" ? "Saving..." : saveStatus === "unsaved" ? "Save" : "Saved"}
                     </button>
                     <Link href="/dashboard" className="bg-jules-surface border border-jules-border text-jules-muted text-xs font-bold px-3 py-1.5 rounded hover:text-white transition-colors">
@@ -379,16 +502,19 @@ export default function ProjectPage() {
                         ))}
                     </div>
 
-                    {/* Members Panel */}
+                    {/* Members Panel (Alternative View) */}
                     <div className="px-4 py-3 border-t border-[#2b2b2b]">
                         <div className="text-[10px] font-bold text-gray-500 uppercase tracking-wider mb-2">Online</div>
                         <div className="space-y-1">
-                            {onlineUsers.map((u, i) => (
+                            {onlineUsers.map((u: any, i: number) => (
                                 <div key={i} className="flex items-center gap-2 text-xs text-gray-400">
-                                    <span className="w-2 h-2 rounded-full bg-green-600"></span>
-                                    {u.name || u.username} {u._id === user._id && "(You)"}
+                                    <div className="w-2 h-2 rounded-full" style={{ background: u.color || '#10b981' }}></div>
+                                    <span className={u._id === user._id ? "font-bold text-white" : ""}>
+                                        {u.name || u.username} {u._id === user._id && "(You)"}
+                                    </span>
                                 </div>
                             ))}
+                            {onlineUsers.length === 0 && <span className="text-xs text-zinc-600">Connecting...</span>}
                         </div>
                     </div>
                 </aside>
@@ -431,9 +557,35 @@ export default function ProjectPage() {
                         >
                             AI Assistant
                         </button>
+                        <button
+                            onClick={() => setRightPanelTab("versions")}
+                            className={`flex-1 py-2 text-[11px] font-bold uppercase transition-colors ${rightPanelTab === "versions" ? "text-white border-b-2 border-orange-500 bg-[#1e1e1e]" : "text-gray-500 hover:text-gray-300"}`}
+                        >
+                            History
+                        </button>
                     </div>
 
                     <div className="flex-1 overflow-hidden relative flex flex-col">
+
+                        {/* VERSIONS TAB */}
+                        {rightPanelTab === "versions" && (
+                            <VersionHistory
+                                versions={versions}
+                                isLoading={isVersionsLoading}
+                                onRestore={handleRestoreVersion}
+                                onPreview={(content) => {
+                                    // Preview Logic: For now, just a confirm or maybe a modal? 
+                                    // Simplest: Replace buffer but warn user it's a preview?
+                                    // Actually, let's just use the restore button for now as per plan. 
+                                    // But user asked for "On click -> preview". 
+                                    // Let's implement a simple read-only preview mode or just load it into editor as "unsaved"
+                                    if (confirm("Load this version into editor to preview? (Unsaved changes will be lost)")) {
+                                        setActiveFile((prev: any) => ({ ...prev, content }));
+                                    }
+                                }}
+                                activeVersionId={activeVersionId}
+                            />
+                        )}
 
                         {/* TEAM CHAT TAB */}
                         {rightPanelTab === "chat" && (
@@ -463,7 +615,11 @@ export default function ProjectPage() {
                                         type="text"
                                         placeholder="Message..."
                                         value={chatText}
-                                        onChange={(e) => setChatText(e.target.value)}
+                                        onChange={(e) => {
+                                            setChatText(e.target.value);
+                                            // Emit Typing on change (throttling would be better but simplified)
+                                            if (user) socket.emit("typing", { projectId, userId: user._id });
+                                        }}
                                         onKeyDown={(e) => e.key === 'Enter' && sendMessage()}
                                         className="w-full bg-[#3c3c3c] border border-[#2b2b2b] rounded px-3 py-1.5 text-sm text-white focus:outline-none focus:border-blue-500 placeholder-gray-500"
                                     />

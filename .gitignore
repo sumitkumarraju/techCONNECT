@@ -41,3 +41,20 @@ yarn-error.log*
 # typescript
 *.tsbuildinfo
 next-env.d.ts
+
+# generated files
+temp/
+/temp
+
+# playwright
+/playwright-report/
+/test-results/
+
+# agent artifacts
+.gemini/
+brain/
+
+.agent
+
+# Local Netlify folder
+.netlify

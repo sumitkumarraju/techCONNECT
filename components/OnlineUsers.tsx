@@ -1,30 +1,27 @@
-"use client";
-
 import React from "react";
 
 export default function OnlineUsers({ users }: { users: any[] }) {
-    // deduplicate users by _id or username if needed, though simpler is just to map
-    const uniqueUsers = Array.from(new Set(users.map(u => u.username || u.name)))
-        .map(username => {
-            return users.find(u => (u.username || u.name) === username);
-        });
-
-    if (uniqueUsers.length === 0) return null;
-
     return (
-        <div className="flex items-center gap-2 text-sm text-zinc-400 bg-[#18181b] px-3 py-1.5 rounded-full border border-zinc-800">
+        <div className="flex items-center gap-2 mr-4 bg-[#1e1e1e] px-3 py-1.5 rounded-lg border border-zinc-800">
+            <span className="text-xs text-zinc-400 font-bold uppercase tracking-wider mr-2">Online:</span>
             <div className="flex -space-x-2">
-                {uniqueUsers.map((u, i) => (
+                {users.map((u, i) => (
                     <div
                         key={i}
-                        className="w-6 h-6 rounded-full bg-gradient-to-br from-indigo-500 to-purple-600 border border-[#18181b] flex items-center justify-center text-[10px] text-white font-bold uppercase"
-                        title={u.username}
+                        className="w-8 h-8 rounded-full flex items-center justify-center text-xs font-bold text-white ring-2 ring-[#0A0A23] relative group cursor-pointer"
+                        style={{ background: u.color || '#6366f1' }}
+                        title={u.name}
                     >
-                        {u.username?.charAt(0)}
+                        {u.name?.[0]?.toUpperCase()}
+
+                        {/* Tooltip */}
+                        <div className="absolute -bottom-8 left-1/2 -translate-x-1/2 bg-black text-white text-[10px] px-2 py-1 rounded opacity-0 group-hover:opacity-100 transition-opacity whitespace-nowrap pointer-events-none z-50">
+                            {u.name}
+                        </div>
                     </div>
                 ))}
             </div>
-            <span className="text-xs">{uniqueUsers.length} online</span>
+            {users.length === 0 && <span className="text-xs text-zinc-600 italic">No one else here</span>}
         </div>
     );
 }

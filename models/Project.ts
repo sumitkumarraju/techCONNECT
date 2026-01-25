@@ -4,8 +4,14 @@ const ProjectSchema = new mongoose.Schema({
   name: { type: String, required: true },
   description: { type: String },
 
-  ownerId: { type: mongoose.Schema.Types.ObjectId, ref: 'User', required: true },
-  members: [{ type: mongoose.Schema.Types.ObjectId, ref: 'User' }],
+  ownerId: { type: mongoose.Schema.Types.ObjectId, ref: 'User', required: true, index: true },
+
+  // Updated members structure to support RBAC
+  members: [{
+    userId: { type: mongoose.Schema.Types.ObjectId, ref: 'User' },
+    role: { type: String, enum: ['owner', 'editor', 'viewer'], default: 'viewer' },
+    joinedAt: { type: Date, default: Date.now }
+  }],
 
   isPublic: { type: Boolean, default: false },
   techStack: [{ type: String }],
