@@ -7,15 +7,53 @@ import API from "@/lib/api";
 export default function ProfilePage() {
   const { user: authUser } = useAuth();
   const [profile, setProfile] = useState<any>(null);
+  const [isEditing, setIsEditing] = useState(false);
+  const [isSaving, setIsSaving] = useState(false);
+
+  // Edit states
+  const [editBio, setEditBio] = useState("");
+  const [editSkills, setEditSkills] = useState("");
+  const [editGithub, setEditGithub] = useState("");
+  const [editLinkedin, setEditLinkedin] = useState("");
+
+  const userAvatar = profile?.avatar;
 
   useEffect(() => {
     if (authUser) {
-      // Use standard API util which handles token automatically
-      API.get('/auth/me') // Or /api/profile if it exists, but usually we just load current user
-        .then(res => setProfile(res.data))
+      API.get('/auth/me')
+        .then(res => {
+          setProfile(res.data);
+          // Sync edit state
+          setEditBio(res.data.bio || "");
+          setEditSkills(res.data.skills?.join(", ") || "");
+          setEditGithub(res.data.githubUrl || "");
+          setEditLinkedin(res.data.linkedinUrl || "");
+        })
         .catch(err => console.error(err));
     }
   }, [authUser]);
+
+  const handleSaveProfile = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setIsSaving(true);
+    try {
+      const skillsArray = editSkills.split(',').map(s => s.trim()).filter(Boolean);
+      const { data } = await API.put('/profile', {
+        bio: editBio,
+        skills: skillsArray,
+        githubUrl: editGithub,
+        linkedinUrl: editLinkedin
+      });
+      setProfile(data);
+      setIsEditing(false);
+    } catch (error) {
+      console.error("Failed to save profile", error);
+      alert("Failed to save changes");
+    } finally {
+      setIsSaving(false);
+    }
+  };
+
 
   if (!profile) return <div className="p-10 text-white">Loading profile...</div>;
 
@@ -29,6 +67,7 @@ export default function ProfilePage() {
             <div className="w-32 h-32 rounded-full bg-black p-1">
               <div className="w-full h-full rounded-full bg-gradient-to-tr from-blue-500 to-purple-500 flex items-center justify-center text-4xl font-bold text-white relative overflow-hidden group">
                 {userAvatar ? (
+                  /* eslint-disable-next-line @next/next/no-img-element */
                   <img src={userAvatar} alt="Profile" className="w-full h-full object-cover" />
                 ) : (
                   profile?.username?.substring(0, 2).toUpperCase()

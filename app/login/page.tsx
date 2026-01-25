@@ -143,7 +143,7 @@ export default function Login() {
             </form>
 
             <div className="mt-6 text-center text-sm text-jules-muted">
-              <span>Don't have an account?</span>
+              <span>Don&apos;t have an account?</span>
               <Link href="/register" className="text-jules-accent font-medium hover:underline ml-1">Create account</Link>
             </div>
 

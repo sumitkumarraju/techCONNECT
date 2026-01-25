@@ -166,6 +166,7 @@ export const Lid = ({
         <div className="absolute inset-0 bg-[#272729] rounded-lg" />
 
         {src && (
+          /* eslint-disable-next-line @next/next/no-img-element */
           <img
             src={src}
             alt="macbook"

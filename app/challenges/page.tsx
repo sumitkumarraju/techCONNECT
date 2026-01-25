@@ -124,7 +124,7 @@ export default function ChallengesPage() {
 
             <div className="mt-8 p-4 bg-gradient-to-br from-purple-900/20 to-blue-900/20 rounded-xl border border-purple-500/20">
               <h3 className="text-sm font-bold text-purple-300 mb-1">Weekly Challenge</h3>
-              <p className="text-xs text-gray-400 mb-3">Solve "Reverse Linked List" to earn double XP this week!</p>
+              <p className="text-xs text-gray-400 mb-3">Solve &quot;Reverse Linked List&quot; to earn double XP this week!</p>
               <button className="w-full py-2 bg-purple-600 hover:bg-purple-500 text-white text-xs font-bold rounded transition-colors">
                 View Challenge
               </button>

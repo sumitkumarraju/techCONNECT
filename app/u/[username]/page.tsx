@@ -39,6 +39,7 @@ export default function PublicProfilePage() {
                     <div className="w-32 h-32 rounded-full bg-black p-1">
                         <div className="w-full h-full rounded-full bg-gradient-to-tr from-gray-500 to-blue-500 flex items-center justify-center text-4xl font-bold text-white relative overflow-hidden">
                             {profile.avatar ? (
+                                /* eslint-disable-next-line @next/next/no-img-element */
                                 <img src={profile.avatar} alt="Profile" className="w-full h-full object-cover" />
                             ) : (
                                 profile.username.substring(0, 2).toUpperCase()

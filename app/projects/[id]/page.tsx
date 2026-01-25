@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, useEffect, useRef } from "react";
+import React, { useState, useEffect, useRef, useCallback } from "react";
 import { useParams } from "next/navigation";
 import Link from "next/link";
 import { useAuth } from "@/context/AuthContext";
@@ -259,7 +259,8 @@ export default function ProjectPage() {
 
 
     // Version History Logic
-    const handleFetchVersions = async () => {
+    // Version History Logic
+    const handleFetchVersions = useCallback(async () => {
         if (!activeFile) return;
         setIsVersionsLoading(true);
         try {
@@ -270,7 +271,7 @@ export default function ProjectPage() {
         } finally {
             setIsVersionsLoading(false);
         }
-    };
+    }, [activeFile]);
 
     const handleRestoreVersion = async (versionId: string) => {
         if (!activeFile) return;
@@ -316,7 +317,7 @@ export default function ProjectPage() {
         if (rightPanelTab === "versions") {
             handleFetchVersions();
         }
-    }, [rightPanelTab, activeFile]);
+    }, [rightPanelTab, activeFile, handleFetchVersions]);
 
 
     // Run Code

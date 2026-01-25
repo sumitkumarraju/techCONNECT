@@ -117,7 +117,7 @@ export default function Home() {
           </div>
           <h2 className="text-xl md:text-2xl font-bold text-center mb-8 leading-tight">
             TechConnect handles the setup you <br />
-            <span className="text-white border-b-4 border-jules-accent inline-block pb-1 mt-2">don't want</span> to do.
+            <span className="text-white border-b-4 border-jules-accent inline-block pb-1 mt-2">don&apos;t want</span> to do.
           </h2>
           <div className="grid grid-cols-2 gap-4 font-bold text-sm text-center text-jules-bg">
             <div className="bg-[#E546CA] p-3 shadow-[4px_4px_0px_0px_#000000]">Environment</div>
@@ -210,7 +210,7 @@ export default function Home() {
               </div>
               <div className="flex bg-white/5">
                 <div className="w-8 text-jules-muted/50 text-right pr-4 select-none">3</div>
-                <div className="pl-8"><span className="text-blue-400">&lt;div</span> <span className="text-green-400">className</span>=<span className="text-orange-400">"flex flex-col items-center"</span>&gt;</div>
+                <div className="pl-8"><span className="text-blue-400">&lt;div</span> <span className="text-green-400">className</span>=<span className="text-orange-400">&quot;flex flex-col items-center&quot;</span>&gt;</div>
                 <div className="absolute right-10 bg-jules-accent text-jules-bg px-2 text-xs rounded font-bold">You</div>
               </div>
               <div className="flex">
@@ -290,6 +290,7 @@ export default function Home() {
 
           {/* Center Octopus */}
           <div className="md:col-span-6 flex justify-center py-10 md:py-0">
+            {/* eslint-disable-next-line @next/next/no-img-element */}
             <img src="https://jules.google/squid.png" alt="Octopus" className="w-[280px] md:w-[400px] animate-[pulse_4s_ease-in-out_infinite]" />
           </div>
 
@@ -340,11 +341,11 @@ export default function Home() {
         <h2 className="text-2xl font-bold text-jules-muted mb-16 uppercase tracking-widest">Built by students, for students</h2>
         <div className="grid grid-cols-1 md:grid-cols-2 gap-12">
           <div>
-            <p className="text-xl italic mb-6">"Finally a platform where group projects actually feel organized."</p>
+            <p className="text-xl italic mb-6">&quot;Finally a platform where group projects actually feel organized.&quot;</p>
             <p className="font-bold text-jules-accent">— Computer Science Student</p>
           </div>
           <div>
-            <p className="text-xl italic mb-6">"Great for hackathons and collaborative learning. The environment setup is magic."</p>
+            <p className="text-xl italic mb-6">&quot;Great for hackathons and collaborative learning. The environment setup is magic.&quot;</p>
             <p className="font-bold text-jules-accent">— Frontend Developer</p>
           </div>
         </div>
