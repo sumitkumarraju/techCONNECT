@@ -125,6 +125,7 @@ const CodeEditor = forwardRef<CodeEditorHandle, CodeEditorProps>(({ file, onCode
                 isRemoteUpdate.current = false;
             }
         }
+        // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [file?._id]); // Only reset when ID changes
 
     useEffect(() => {

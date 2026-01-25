@@ -396,7 +396,7 @@ export const Keypad = () => {
           ;
         </KBtn>
         <KBtn className="w-10 pl-[4px] pb-[2px] items-start">
-          '
+          &apos;
         </KBtn>
         <KBtn
           className="w-[3.65rem] items-end justify-end pr-[4px] pb-[2px]"

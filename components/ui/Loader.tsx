@@ -4,6 +4,7 @@ export const LoaderOne = () => {
     return (
         <div className="flex flex-col items-center justify-center min-h-[200px] w-full h-full">
             <div className="w-16 h-16 relative">
+                {/* eslint-disable-next-line @next/next/no-img-element */}
                 <img
                     src="/jules-pixelated.png"
                     alt="Squid agent"

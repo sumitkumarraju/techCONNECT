@@ -19,6 +19,7 @@ export default function DiscussionPanel({ projectId, user }: DiscussionPanelProp
     const [commentText, setCommentText] = useState("");
     const [isCreating, setIsCreating] = useState(false);
 
+    // eslint-disable-next-line react-hooks/exhaustive-deps
     useEffect(() => {
         if (view === "list") fetchDiscussions();
     }, [view, projectId]);
