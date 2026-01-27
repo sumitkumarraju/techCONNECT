@@ -19,22 +19,21 @@ export default function DiscussionPanel({ projectId, user }: DiscussionPanelProp
     const [commentText, setCommentText] = useState("");
     const [isCreating, setIsCreating] = useState(false);
 
-    // eslint-disable-next-line react-hooks/exhaustive-deps
     useEffect(() => {
+        const fetchDiscussions = async () => {
+            setIsLoading(true);
+            try {
+                const { data } = await API.get(`/discussions?projectId=${projectId}`);
+                setDiscussions(data);
+            } catch (err) {
+                console.error(err);
+            } finally {
+                setIsLoading(false);
+            }
+        };
+
         if (view === "list") fetchDiscussions();
     }, [view, projectId]);
-
-    const fetchDiscussions = async () => {
-        setIsLoading(true);
-        try {
-            const { data } = await API.get(`/discussions?projectId=${projectId}`);
-            setDiscussions(data);
-        } catch (err) {
-            console.error(err);
-        } finally {
-            setIsLoading(false);
-        }
-    };
 
     const fetchDiscussionDetail = async (id: string) => {
         setIsLoading(true);

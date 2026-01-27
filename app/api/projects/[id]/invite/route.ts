@@ -49,3 +49,5 @@ export async function POST(req: Request, { params }: { params: { id: string } })
         return NextResponse.json({ error: "Failed to invite user" }, { status: 500 });
     }
 }
+
+export const dynamic = 'force-dynamic';
