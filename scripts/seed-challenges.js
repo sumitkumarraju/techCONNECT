@@ -48,13 +48,24 @@ const ChallengeSchema = new mongoose.Schema({
     description: String,
     difficulty: String,
     points: Number,
-    category: String,
     starterCode: String,
     testCases: Array,
     tags: [String],
+    createdBy: { type: mongoose.Schema.Types.ObjectId, ref: 'User' }
 }, { timestamps: true });
 
 const Challenge = mongoose.models.Challenge || mongoose.model('Challenge', ChallengeSchema);
+
+// Define User schema locally for seeding
+const UserSchema = new mongoose.Schema({
+    name: String,
+    username: String,
+    email: String,
+    passwordHash: String,
+    role: String
+}, { timestamps: true });
+
+const User = mongoose.models.User || mongoose.model('User', UserSchema);
 
 async function seed() {
     // Need mongo uri, check process.env or hardcode for local if .env fails to load
@@ -68,11 +79,34 @@ async function seed() {
         await mongoose.connect(uri);
         console.log("✅ Connected to DB");
 
+        // Find or create a user to assign as creator
+        let adminUser = await User.findOne({ role: 'admin' });
+        if (!adminUser) {
+            adminUser = await User.findOne({}); // Any user
+        }
+
+        if (!adminUser) {
+            console.log("No users found. Creating a temporary admin user...");
+            adminUser = await User.create({
+                name: "Admin User",
+                username: "admin",
+                email: "admin@example.com",
+                passwordHash: "placeholder_hash", // Not a real hash, but sufficient for reference
+                role: "admin"
+            });
+            console.log("✅ Created temporary admin user");
+        }
+
         console.log("Cleaning old challenges...");
         await Challenge.deleteMany({});
 
         console.log("Seeding new challenges...");
-        const docs = await Challenge.insertMany(CHALLENGES);
+        const challengesWithUser = CHALLENGES.map(c => ({
+            ...c,
+            createdBy: adminUser._id
+        }));
+
+        const docs = await Challenge.insertMany(challengesWithUser);
         console.log(`✅ Seeded ${docs.length} challenges`);
 
         process.exit(0);
