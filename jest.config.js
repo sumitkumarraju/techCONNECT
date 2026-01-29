@@ -4,4 +4,5 @@ module.exports = {
   moduleNameMapper: {
     '^@/(.*)$': '<rootDir>/$1',
   },
+  testPathIgnorePatterns: ['<rootDir>/e2e/'],
 };
