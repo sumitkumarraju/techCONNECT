@@ -41,7 +41,7 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: "Validation Error", details: validation.error.format() }, { status: 400 });
     }
 
-    const challenge = await Challenge.create(validation.data);
+    const challenge = await Challenge.create({ ...validation.data, createdBy: userId });
     return NextResponse.json(challenge);
   } catch (error) {
     return NextResponse.json({ error: "Failed to create challenge" }, { status: 500 });
