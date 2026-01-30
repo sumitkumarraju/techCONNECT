@@ -31,7 +31,7 @@ export async function GET(req: NextRequest, { params }: { params: { id: string }
         }
 
         // Check membership
-        const isMember = project.members.some((memberId: any) => memberId.toString() === userId);
+        const isMember = project.members.some((member: any) => member.userId.toString() === userId) || project.ownerId.toString() === userId;
         if (!isMember) {
             return NextResponse.json({ message: "Access denied" }, { status: 403 });
         }
