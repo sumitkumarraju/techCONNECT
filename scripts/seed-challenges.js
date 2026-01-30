@@ -1,5 +1,5 @@
 const mongoose = require('mongoose');
-require('dotenv').config({ path: '.env.local' }); // Load env vars (or .env)
+require('dotenv').config({ path: '.env.local' });
 
 const CHALLENGES = [
     {
@@ -42,22 +42,31 @@ const CHALLENGES = [
     }
 ];
 
-// Simple Schema definition to avoid importing the TS model which might fail here
+// User Schema (simplified matching required fields)
+const UserSchema = new mongoose.Schema({
+    name: { type: String, required: true },
+    username: { type: String, required: true },
+    email: { type: String, required: true },
+    passwordHash: { type: String, required: true }, // Added required field
+    role: { type: String, default: 'user' },
+}, { timestamps: true });
+const User = mongoose.models.User || mongoose.model('User', UserSchema);
+
+// Challenge Schema (matching requirement)
 const ChallengeSchema = new mongoose.Schema({
     title: String,
     description: String,
-    difficulty: String,
+    difficulty: { type: String, enum: ['easy', 'medium', 'hard'] },
     points: Number,
-    category: String,
     starterCode: String,
     testCases: Array,
     tags: [String],
+    createdBy: { type: mongoose.Schema.Types.ObjectId, ref: 'User', required: true }
 }, { timestamps: true });
 
 const Challenge = mongoose.models.Challenge || mongoose.model('Challenge', ChallengeSchema);
 
 async function seed() {
-    // Need mongo uri, check process.env or hardcode for local if .env fails to load
     const uri = process.env.MONGO_URI;
     if (!uri) {
         console.error("❌ No MONGO_URI found in environment");
@@ -68,11 +77,35 @@ async function seed() {
         await mongoose.connect(uri);
         console.log("✅ Connected to DB");
 
+        // Find a user to assign as creator
+        let user = await User.findOne({ role: 'admin' });
+        if (!user) {
+            user = await User.findOne({});
+        }
+
+        if (!user) {
+            console.log("⚠️ No users found in DB. Creating a temporary admin user...");
+             user = await User.create({
+                name: "Admin User",
+                username: "admin",
+                email: "admin@techconnect.com",
+                passwordHash: "$2a$10$abcdefg", // Dummy hash
+                role: 'admin'
+            });
+        }
+
+        console.log(`Using user: ${user.username} (${user._id}) as creator.`);
+
         console.log("Cleaning old challenges...");
         await Challenge.deleteMany({});
 
         console.log("Seeding new challenges...");
-        const docs = await Challenge.insertMany(CHALLENGES);
+        const challengesWithUser = CHALLENGES.map(c => ({
+            ...c,
+            createdBy: user._id
+        }));
+
+        const docs = await Challenge.insertMany(challengesWithUser);
         console.log(`✅ Seeded ${docs.length} challenges`);
 
         process.exit(0);
