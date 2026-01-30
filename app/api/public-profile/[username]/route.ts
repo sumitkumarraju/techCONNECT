@@ -24,3 +24,5 @@ export async function GET(req: Request, { params }: { params: { username: string
         return NextResponse.json({ error: "Failed to fetch profile" }, { status: 500 });
     }
 }
+
+export const dynamic = 'force-dynamic';
