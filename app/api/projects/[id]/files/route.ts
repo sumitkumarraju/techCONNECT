@@ -26,6 +26,18 @@ export async function GET(req: NextRequest, { params }: { params: { id: string }
             return NextResponse.json({ message: "Not authorized" }, { status: 401 });
         }
 
+        const project = await Project.findById(params.id);
+        if (!project) {
+            return NextResponse.json({ message: "Project not found" }, { status: 404 });
+        }
+
+        const isOwner = project.ownerId.toString() === userId;
+        const isMember = project.members.some((m: any) => m.userId.toString() === userId);
+
+        if (!isOwner && !isMember && !project.isPublic) {
+             return NextResponse.json({ message: "Not authorized to view files" }, { status: 403 });
+        }
+
         const files = await CodeFile.find({ projectId: params.id }).select('name language updatedAt');
         return NextResponse.json(files);
     } catch (error: any) {
@@ -52,7 +64,7 @@ export async function POST(req: NextRequest, { params }: { params: { id: string 
 
         // Check Permissions
         const isOwner = project.ownerId.toString() === userId;
-        const isMember = project.members.some((m: any) => m.toString() === userId);
+        const isMember = project.members.some((m: any) => m.userId.toString() === userId);
 
         if (!isOwner && !isMember) {
             return NextResponse.json({ message: "Not authorized to create files in this project" }, { status: 403 });
