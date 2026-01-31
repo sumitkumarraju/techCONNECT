@@ -48,10 +48,10 @@ const ChallengeSchema = new mongoose.Schema({
     description: String,
     difficulty: String,
     points: Number,
-    category: String,
     starterCode: String,
     testCases: Array,
     tags: [String],
+    createdBy: mongoose.Schema.Types.ObjectId
 }, { timestamps: true });
 
 const Challenge = mongoose.models.Challenge || mongoose.model('Challenge', ChallengeSchema);
@@ -71,8 +71,33 @@ async function seed() {
         console.log("Cleaning old challenges...");
         await Challenge.deleteMany({});
 
+        // Fetch a user to be the creator
+        let user = await mongoose.connection.collection('users').findOne({});
+
+        if (!user) {
+            console.log("⚠️ No users found. Creating a default admin user for seeding...");
+            const result = await mongoose.connection.collection('users').insertOne({
+                name: "Seed Admin",
+                username: "seed_admin",
+                email: "admin@techconnect.dev",
+                passwordHash: "$2a$10$XXXXXXXXXXXXXXXXXXXXXXXXXXXX", // Dummy hash
+                role: "admin",
+                createdAt: new Date(),
+                updatedAt: new Date()
+            });
+            user = { _id: result.insertedId };
+            console.log("✅ Created default admin user");
+        }
+
+        console.log(`Using user ${user._id} as creator.`);
+
+        const challengesWithUser = CHALLENGES.map(c => ({
+            ...c,
+            createdBy: user._id
+        }));
+
         console.log("Seeding new challenges...");
-        const docs = await Challenge.insertMany(CHALLENGES);
+        const docs = await Challenge.insertMany(challengesWithUser);
         console.log(`✅ Seeded ${docs.length} challenges`);
 
         process.exit(0);

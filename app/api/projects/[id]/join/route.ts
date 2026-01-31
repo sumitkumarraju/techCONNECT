@@ -30,12 +30,12 @@ export async function POST(req: NextRequest, { params }: { params: { id: string 
             return NextResponse.json({ message: "Project not found" }, { status: 404 });
         }
 
-        const isMember = project.members.some((memberId: any) => memberId.toString() === userId);
+        const isMember = project.members.some((member: any) => member.userId.toString() === userId);
         if (isMember) {
             return NextResponse.json({ message: "Already a member" }, { status: 400 });
         }
 
-        project.members.push(userId);
+        project.members.push({ userId, role: 'viewer' });
         await project.save();
 
         return NextResponse.json({ message: "Joined project successfully" });
