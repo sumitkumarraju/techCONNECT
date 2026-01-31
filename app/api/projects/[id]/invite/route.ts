@@ -2,21 +2,35 @@ import { NextResponse } from "next/server";
 import dbConnect from "@/lib/db";
 import Project from "@/models/Project";
 import User from "@/models/User";
+import jwt from 'jsonwebtoken';
+
+const getDataFromToken = (req: Request) => {
+    try {
+        const token = req.headers.get("Authorization")?.split(" ")[1];
+        if (!token) return null;
+        const decoded: any = jwt.verify(token, process.env.JWT_SECRET || 'devsecret');
+        return decoded.id;
+    } catch (error: any) {
+        return null;
+    }
+}
 
 export async function POST(req: Request, { params }: { params: { id: string } }) {
     try {
         await dbConnect();
-        const { email, role, requestedBy } = await req.json();
+        const userId = getDataFromToken(req);
+        if (!userId) {
+            return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+        }
+
+        const { email, role } = await req.json();
 
         // 1. Fetch Project
         const project = await Project.findById(params.id);
         if (!project) return NextResponse.json({ error: "Project not found" }, { status: 404 });
 
-        // 2. Permission Check (Only Owner can invite for now, or Editor?) -> Owner only for safety
-        if (project.ownerId.toString() !== requestedBy) {
-            // Check if requester is owner (simple check). 
-            // Ideally we check session/token here but relying on passed ID + client side guard for MVP.
-            // Security Note: In production, `requestedBy` should come from the AUTH TOKEN, not the body.
+        // 2. Permission Check (Only Owner can invite for now)
+        if (project.ownerId.toString() !== userId) {
             return NextResponse.json({ error: "Permission denied" }, { status: 403 });
         }
 

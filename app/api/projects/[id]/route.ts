@@ -20,9 +20,6 @@ export async function GET(req: NextRequest, { params }: { params: { id: string }
     try {
         await connectDB();
         const userId = getDataFromToken(req);
-        if (!userId) {
-            return NextResponse.json({ message: "Not authorized" }, { status: 401 });
-        }
 
         const project = await Project.findById(params.id);
 
@@ -30,10 +27,21 @@ export async function GET(req: NextRequest, { params }: { params: { id: string }
             return NextResponse.json({ message: "Project not found" }, { status: 404 });
         }
 
-        // Check membership
-        const isMember = project.members.some((memberId: any) => memberId.toString() === userId);
-        if (!isMember) {
-            return NextResponse.json({ message: "Access denied" }, { status: 403 });
+        // Access Control
+        const isPublic = project.isPublic;
+        let hasAccess = isPublic;
+
+        if (userId) {
+             const isOwner = project.ownerId.toString() === userId;
+             const isMember = project.members.some((member: any) => member.userId.toString() === userId);
+             if (isOwner || isMember) {
+                 hasAccess = true;
+             }
+        }
+
+        if (!hasAccess) {
+             if (!userId) return NextResponse.json({ message: "Not authorized" }, { status: 401 });
+             return NextResponse.json({ message: "Access denied" }, { status: 403 });
         }
 
         return NextResponse.json(project);
