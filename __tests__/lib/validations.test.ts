@@ -1,6 +1,34 @@
-import { loginSchema, registerSchema, createProjectSchema } from '@/lib/validations';
+import { loginSchema, registerSchema, createProjectSchema, challengeSchema } from '@/lib/validations';
 
 describe('Validation Schemas', () => {
+    describe('challengeSchema', () => {
+        it('should validate correct input with lowercase difficulty', () => {
+            const result = challengeSchema.safeParse({
+                title: 'Test Challenge',
+                description: 'Description',
+                difficulty: 'easy',
+                points: 100,
+                tags: ['tag1'],
+                starterCode: 'code',
+                testCases: []
+            });
+            expect(result.success).toBe(true);
+        });
+
+        it('should fail with uppercase difficulty', () => {
+            const result = challengeSchema.safeParse({
+                title: 'Test Challenge',
+                description: 'Description',
+                difficulty: 'Easy', // Capitalized should fail now
+                points: 100,
+                tags: ['tag1'],
+                starterCode: 'code',
+                testCases: []
+            });
+            expect(result.success).toBe(false);
+        });
+    });
+
     describe('loginSchema', () => {
         it('should validate correct input', () => {
             const result = loginSchema.safeParse({ email: 'test@example.com', password: 'password123' });
