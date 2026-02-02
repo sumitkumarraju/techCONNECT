@@ -5,6 +5,8 @@ import jwt, { JwtPayload } from 'jsonwebtoken';
 
 const JWT_SECRET = process.env.JWT_SECRET || 'secret-key';
 
+export const dynamic = 'force-dynamic';
+
 function getUserFromToken(req: Request) {
   const authHeader = req.headers.get('authorization');
   if (!authHeader) return null;
