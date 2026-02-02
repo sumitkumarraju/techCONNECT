@@ -2,6 +2,8 @@ import { NextResponse } from "next/server";
 import dbConnect from "@/lib/db";
 import FileVersion from "@/models/FileVersion";
 
+export const dynamic = 'force-dynamic';
+
 // GET: Fetch versions for a file
 export async function GET(req: Request) {
     try {
