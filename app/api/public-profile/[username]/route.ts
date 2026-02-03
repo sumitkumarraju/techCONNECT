@@ -3,6 +3,8 @@ import dbConnect from '@/lib/db';
 import User from '@/models/User';
 import Project from '@/models/Project';
 
+export const dynamic = 'force-dynamic';
+
 export async function GET(req: Request, { params }: { params: { username: string } }) {
     try {
         await dbConnect();

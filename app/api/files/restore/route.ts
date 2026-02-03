@@ -3,6 +3,8 @@ import dbConnect from "@/lib/db";
 import FileVersion from "@/models/FileVersion";
 import CodeFile from "@/models/CodeFile";
 
+export const dynamic = 'force-dynamic';
+
 export async function POST(req: Request) {
     try {
         await dbConnect();
