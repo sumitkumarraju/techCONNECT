@@ -3,6 +3,8 @@ import dbConnect from "@/lib/db";
 import Discussion from "@/models/Discussion";
 import Comment from "@/models/Comment";
 
+export const dynamic = 'force-dynamic';
+
 export async function GET(req: Request, { params }: { params: { id: string } }) {
     try {
         await dbConnect();

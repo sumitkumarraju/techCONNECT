@@ -29,7 +29,7 @@ export const updateProjectSchema = z.object({
 export const challengeSchema = z.object({
     title: z.string().min(1, "Title is required"),
     description: z.string().min(1, "Description is required"),
-    difficulty: z.enum(["Easy", "Medium", "Hard"]),
+    difficulty: z.enum(["easy", "medium", "hard"]),
     points: z.number().int().positive(),
     tags: z.array(z.string()),
     starterCode: z.string(),

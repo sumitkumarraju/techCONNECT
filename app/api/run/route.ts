@@ -9,6 +9,8 @@ const execAsync = promisify(exec);
 const writeFileAsync = promisify(fs.writeFile);
 const unlinkAsync = promisify(fs.unlink);
 
+export const dynamic = 'force-dynamic';
+
 export async function POST(req: NextRequest) {
     try {
         const { language, code } = await req.json();
