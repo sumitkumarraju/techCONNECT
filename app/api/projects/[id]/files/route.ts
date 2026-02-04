@@ -3,6 +3,7 @@ import connectDB from '@/lib/db';
 import CodeFile from '@/models/CodeFile';
 import Project from '@/models/Project';
 import jwt from 'jsonwebtoken';
+import { getProjectRole, hasPermission } from '@/lib/auth';
 
 export const dynamic = 'force-dynamic';
 
@@ -22,8 +23,22 @@ export async function GET(req: NextRequest, { params }: { params: { id: string }
     try {
         await connectDB();
         const userId = getDataFromToken(req);
-        if (!userId) {
-            return NextResponse.json({ message: "Not authorized" }, { status: 401 });
+
+        // Find project first to check permissions
+        const project = await Project.findById(params.id);
+        if (!project) {
+            return NextResponse.json({ message: "Project not found" }, { status: 404 });
+        }
+
+        // If not public, require authentication and membership
+        if (!project.isPublic) {
+            if (!userId) {
+                return NextResponse.json({ message: "Not authorized" }, { status: 401 });
+            }
+            const role = getProjectRole(project, userId);
+            if (!hasPermission(role, 'VIEW')) {
+                return NextResponse.json({ message: "Access denied" }, { status: 403 });
+            }
         }
 
         const files = await CodeFile.find({ projectId: params.id }).select('name language updatedAt');
@@ -51,10 +66,8 @@ export async function POST(req: NextRequest, { params }: { params: { id: string 
         }
 
         // Check Permissions
-        const isOwner = project.ownerId.toString() === userId;
-        const isMember = project.members.some((m: any) => m.toString() === userId);
-
-        if (!isOwner && !isMember) {
+        const role = getProjectRole(project, userId);
+        if (!hasPermission(role, 'EDIT')) {
             return NextResponse.json({ message: "Not authorized to create files in this project" }, { status: 403 });
         }
 

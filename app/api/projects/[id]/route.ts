@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import connectDB from '@/lib/db';
 import Project from '@/models/Project';
 import jwt from 'jsonwebtoken';
+import { getProjectRole } from '@/lib/auth';
 
 export const dynamic = 'force-dynamic';
 
@@ -31,8 +32,8 @@ export async function GET(req: NextRequest, { params }: { params: { id: string }
         }
 
         // Check membership
-        const isMember = project.members.some((memberId: any) => memberId.toString() === userId);
-        if (!isMember) {
+        const role = getProjectRole(project, userId);
+        if (role === 'none') {
             return NextResponse.json({ message: "Access denied" }, { status: 403 });
         }
 
@@ -56,7 +57,8 @@ export async function PUT(req: NextRequest, { params }: { params: { id: string }
             return NextResponse.json({ message: "Project not found" }, { status: 404 });
         }
 
-        if (project.ownerId.toString() !== userId) {
+        const role = getProjectRole(project, userId);
+        if (role !== 'owner') {
             return NextResponse.json({ message: "Only owner can update project" }, { status: 403 });
         }
 
@@ -87,7 +89,8 @@ export async function DELETE(req: NextRequest, { params }: { params: { id: strin
             return NextResponse.json({ message: "Project not found" }, { status: 404 });
         }
 
-        if (project.ownerId.toString() !== userId) {
+        const role = getProjectRole(project, userId);
+        if (role !== 'owner') {
             return NextResponse.json({ message: "Only owner can delete project" }, { status: 403 });
         }
 

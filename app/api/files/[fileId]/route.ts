@@ -3,6 +3,7 @@ import connectDB from '@/lib/db';
 import CodeFile from '@/models/CodeFile';
 import Project from '@/models/Project';
 import jwt from 'jsonwebtoken';
+import { getProjectRole, hasPermission } from '@/lib/auth';
 
 export const dynamic = 'force-dynamic';
 
@@ -22,10 +23,24 @@ export async function GET(req: NextRequest, { params }: { params: { fileId: stri
     try {
         await connectDB();
         const userId = getDataFromToken(req);
-        if (!userId) return NextResponse.json({ message: "Not authorized" }, { status: 401 });
 
         const file = await CodeFile.findById(params.fileId);
         if (!file) return NextResponse.json({ message: "File not found" }, { status: 404 });
+
+        const project = await Project.findById(file.projectId);
+
+        // If project exists, check permissions
+        if (project) {
+             if (!project.isPublic) {
+                 if (!userId) return NextResponse.json({ message: "Not authorized" }, { status: 401 });
+                 const role = getProjectRole(project, userId);
+                 if (!hasPermission(role, 'VIEW')) {
+                     return NextResponse.json({ message: "Access denied" }, { status: 403 });
+                 }
+             }
+        } else {
+            if (!userId) return NextResponse.json({ message: "Not authorized" }, { status: 401 });
+        }
 
         return NextResponse.json(file);
     } catch (error: any) {
@@ -48,9 +63,8 @@ export async function PUT(req: NextRequest, { params }: { params: { fileId: stri
 
         const project = await Project.findById(existingFile.projectId);
         if (project) {
-            const isOwner = project.ownerId.toString() === userId;
-            const isMember = project.members.some((m: any) => m.toString() === userId);
-            if (!isOwner && !isMember) {
+            const role = getProjectRole(project, userId);
+            if (!hasPermission(role, 'EDIT')) {
                 return NextResponse.json({ message: "Not authorized" }, { status: 403 });
             }
         }
@@ -87,9 +101,8 @@ export async function DELETE(req: NextRequest, { params }: { params: { fileId: s
         // Check permissions
         const project = await Project.findById(existingFile.projectId);
         if (project) {
-            const isOwner = project.ownerId.toString() === userId;
-            const isMember = project.members.some((m: any) => m.toString() === userId);
-            if (!isOwner && !isMember) {
+            const role = getProjectRole(project, userId);
+            if (!hasPermission(role, 'EDIT')) {
                 return NextResponse.json({ message: "Not authorized" }, { status: 403 });
             }
         }
