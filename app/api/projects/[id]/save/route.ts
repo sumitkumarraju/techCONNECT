@@ -3,6 +3,8 @@ import dbConnect from '@/lib/db';
 import Project from '@/models/Project';
 import jwt, { JwtPayload } from 'jsonwebtoken';
 
+export const dynamic = 'force-dynamic';
+
 const JWT_SECRET = process.env.JWT_SECRET || 'secret-key';
 
 function getUserFromToken(req: Request) {
