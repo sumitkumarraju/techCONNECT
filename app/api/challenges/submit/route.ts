@@ -5,9 +5,12 @@ import Submission from "@/models/Submission";
 import { exec } from "child_process";
 import fs from "fs";
 import path from "path";
+import os from "os";
 import util from 'util';
 import jwt from 'jsonwebtoken';
 import { submissionSchema } from "@/lib/validations";
+
+export const dynamic = 'force-dynamic';
 
 const execPromise = util.promisify(exec);
 
@@ -60,13 +63,7 @@ export async function POST(req: NextRequest) {
 
         // Create a temporary file
         const tempFileName = `temp_${userId}_${Date.now()}.js`;
-        // In a real app, use /tmp or proper temp dir. Windows compatible here via relative path or process.env.TEMP
-        const tempFilePath = path.join(process.cwd(), "temp", tempFileName);
-
-        // Ensure temp dir exists
-        if (!fs.existsSync(path.join(process.cwd(), "temp"))) {
-            fs.mkdirSync(path.join(process.cwd(), "temp"));
-        }
+        const tempFilePath = path.join(os.tmpdir(), tempFileName);
 
         try {
             // For each test case, we append a runner script to the user code

@@ -5,6 +5,8 @@ import path from "path";
 import os from "os";
 import { promisify } from "util";
 
+export const dynamic = 'force-dynamic';
+
 const execAsync = promisify(exec);
 const writeFileAsync = promisify(fs.writeFile);
 const unlinkAsync = promisify(fs.unlink);

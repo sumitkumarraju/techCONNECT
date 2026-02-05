@@ -3,6 +3,8 @@ import dbConnect from "@/lib/db";
 import Project from "@/models/Project";
 import User from "@/models/User";
 
+export const dynamic = 'force-dynamic';
+
 export async function POST(req: Request, { params }: { params: { id: string } }) {
     try {
         await dbConnect();
