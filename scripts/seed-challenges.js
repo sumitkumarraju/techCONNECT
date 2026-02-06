@@ -48,10 +48,10 @@ const ChallengeSchema = new mongoose.Schema({
     description: String,
     difficulty: String,
     points: Number,
-    category: String,
     starterCode: String,
     testCases: Array,
     tags: [String],
+    createdBy: mongoose.Schema.Types.ObjectId,
 }, { timestamps: true });
 
 const Challenge = mongoose.models.Challenge || mongoose.model('Challenge', ChallengeSchema);
@@ -68,11 +68,31 @@ async function seed() {
         await mongoose.connect(uri);
         console.log("✅ Connected to DB");
 
+        // Find or create a user to be the creator
+        let user = await mongoose.connection.collection('users').findOne({});
+        let userId;
+
+        if (!user) {
+            console.log("Creating placeholder user...");
+            const result = await mongoose.connection.collection('users').insertOne({
+                name: "Seed User",
+                email: "seed@example.com",
+                username: "seeduser",
+                password: "hashedpassword",
+                createdAt: new Date(),
+                updatedAt: new Date()
+            });
+            userId = result.insertedId;
+        } else {
+            userId = user._id;
+        }
+
         console.log("Cleaning old challenges...");
         await Challenge.deleteMany({});
 
         console.log("Seeding new challenges...");
-        const docs = await Challenge.insertMany(CHALLENGES);
+        const challengesWithUser = CHALLENGES.map(c => ({ ...c, createdBy: userId }));
+        const docs = await Challenge.insertMany(challengesWithUser);
         console.log(`✅ Seeded ${docs.length} challenges`);
 
         process.exit(0);

@@ -1,5 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { exec } from "child_process";
+
+export const dynamic = 'force-dynamic';
 import fs from "fs";
 import path from "path";
 import os from "os";

@@ -4,6 +4,8 @@ import Challenge from "@/models/Challenge";
 import jwt from 'jsonwebtoken';
 import { challengeSchema } from "@/lib/validations";
 
+export const dynamic = 'force-dynamic';
+
 const getDataFromToken = (req: NextRequest) => {
   try {
     const token = req.headers.get("Authorization")?.split(" ")[1];
@@ -41,7 +43,10 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: "Validation Error", details: validation.error.format() }, { status: 400 });
     }
 
-    const challenge = await Challenge.create(validation.data);
+    const challenge = await Challenge.create({
+      ...validation.data,
+      createdBy: userId
+    });
     return NextResponse.json(challenge);
   } catch (error) {
     return NextResponse.json({ error: "Failed to create challenge" }, { status: 500 });
