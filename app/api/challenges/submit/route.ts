@@ -7,6 +7,7 @@ import fs from "fs";
 import path from "path";
 import util from 'util';
 import jwt from 'jsonwebtoken';
+import os from 'os';
 import { submissionSchema } from "@/lib/validations";
 
 const execPromise = util.promisify(exec);
@@ -58,15 +59,7 @@ export async function POST(req: NextRequest) {
         let finalStatus = "pending";
         let executionOutput = "";
 
-        // Create a temporary file
-        const tempFileName = `temp_${userId}_${Date.now()}.js`;
-        // In a real app, use /tmp or proper temp dir. Windows compatible here via relative path or process.env.TEMP
-        const tempFilePath = path.join(process.cwd(), "temp", tempFileName);
-
-        // Ensure temp dir exists
-        if (!fs.existsSync(path.join(process.cwd(), "temp"))) {
-            fs.mkdirSync(path.join(process.cwd(), "temp"));
-        }
+        const tempFiles: string[] = [];
 
         try {
             // For each test case, we append a runner script to the user code
@@ -74,7 +67,14 @@ export async function POST(req: NextRequest) {
             // BETTER: User code exports a function, and we require() it. 
             // LET'S ASSUME: User writes a function solution(input).
 
-            for (const test of challenge.testCases) {
+            for (let i = 0; i < challenge.testCases.length; i++) {
+                const test = challenge.testCases[i];
+
+                // Create a temporary file unique for this test case
+                const tempFileName = `temp_${userId}_${Date.now()}_${i}.js`;
+                const tempFilePath = path.join(os.tmpdir(), tempFileName);
+                tempFiles.push(tempFilePath);
+
                 // Construct runner code
                 const runnerCode = `
                     ${code}
@@ -111,8 +111,16 @@ export async function POST(req: NextRequest) {
             executionOutput = `Execution Error: ${error.stderr || error.message}`;
             console.error("Exec error:", error);
         } finally {
-            // Cleanup
-            if (fs.existsSync(tempFilePath)) fs.unlinkSync(tempFilePath);
+            // Cleanup all temp files
+            for (const file of tempFiles) {
+                if (fs.existsSync(file)) {
+                    try {
+                        fs.unlinkSync(file);
+                    } catch (e) {
+                        console.error(`Failed to delete temp file ${file}:`, e);
+                    }
+                }
+            }
         }
 
         // 4. Save Submission
