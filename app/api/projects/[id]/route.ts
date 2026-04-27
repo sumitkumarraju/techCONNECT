@@ -30,13 +30,29 @@ export async function GET(req: NextRequest, { params }: { params: { id: string }
             return NextResponse.json({ message: "Project not found" }, { status: 404 });
         }
 
-        // Check membership
-        const isMember = project.members.some((memberId: any) => memberId.toString() === userId);
-        if (!isMember) {
+        // Check if user is owner
+        const isOwner = project.ownerId.toString() === userId;
+
+        // Check membership using new structure
+        const memberEntry = project.members.find((m: any) => m.userId?.toString() === userId);
+        const isMember = isOwner || !!memberEntry;
+
+        if (!isMember && !project.isPublic) {
             return NextResponse.json({ message: "Access denied" }, { status: 403 });
         }
 
-        return NextResponse.json(project);
+        // Determine user's role
+        let userRole = 'viewer'; // Default for public project non-members
+        if (isOwner) {
+            userRole = 'owner';
+        } else if (memberEntry) {
+            userRole = memberEntry.role;
+        }
+
+        return NextResponse.json({
+            ...project.toObject(),
+            userRole // Include the current user's role in response
+        });
     } catch (error: any) {
         return NextResponse.json({ message: error.message }, { status: 500 });
     }

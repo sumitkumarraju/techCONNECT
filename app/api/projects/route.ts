@@ -66,6 +66,19 @@ export async function POST(req: NextRequest) {
             techStack: body.techStack || []
         });
 
+        // Ensure roomCode was generated (it should be via pre-save hook)
+        if (!project.roomCode) {
+            const crypto = await import('crypto');
+            const chars = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
+            let code = '';
+            const bytes = crypto.randomBytes(6);
+            for (let i = 0; i < 6; i++) {
+                code += chars[bytes[i] % chars.length];
+            }
+            project.roomCode = code;
+            await project.save();
+        }
+
         return NextResponse.json(project, { status: 201 });
     } catch (error) {
         return handleApiError(error);

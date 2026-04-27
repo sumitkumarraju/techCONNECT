@@ -1,6 +1,13 @@
 import React from "react";
 
 export default function OnlineUsers({ users }: { users: any[] }) {
+    const count = users.length;
+    const statusText = count === 0
+        ? "No one in room"
+        : count === 1
+            ? "1 person in room"
+            : `${count} people in room`;
+
     return (
         <div className="flex items-center gap-2 mr-4 bg-[#1e1e1e] px-3 py-1.5 rounded-lg border border-zinc-800">
             <span className="text-xs text-zinc-400 font-bold uppercase tracking-wider mr-2">Online:</span>
@@ -21,7 +28,9 @@ export default function OnlineUsers({ users }: { users: any[] }) {
                     </div>
                 ))}
             </div>
-            {users.length === 0 && <span className="text-xs text-zinc-600 italic">No one else here</span>}
+            <span className={`text-xs ${count > 0 ? "text-emerald-400" : "text-zinc-600 italic"}`}>
+                {statusText}
+            </span>
         </div>
     );
 }

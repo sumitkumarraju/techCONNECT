@@ -30,15 +30,29 @@ export async function POST(req: NextRequest, { params }: { params: { id: string 
             return NextResponse.json({ message: "Project not found" }, { status: 404 });
         }
 
-        const isMember = project.members.some((memberId: any) => memberId.toString() === userId);
+        // Check if user is already a member (using new structure)
+        const isMember = project.members.some((m: any) => m.userId?.toString() === userId);
         if (isMember) {
             return NextResponse.json({ message: "Already a member" }, { status: 400 });
         }
 
-        project.members.push(userId);
+        // Check if user is the owner
+        if (project.ownerId.toString() === userId) {
+            return NextResponse.json({ message: "You are the owner of this project" }, { status: 400 });
+        }
+
+        // Add user as viewer by default
+        project.members.push({
+            userId: userId,
+            role: 'viewer', // New users get viewer role by default
+            joinedAt: new Date()
+        });
         await project.save();
 
-        return NextResponse.json({ message: "Joined project successfully" });
+        return NextResponse.json({
+            message: "Joined project successfully",
+            role: 'viewer'
+        });
     } catch (error: any) {
         return NextResponse.json({ message: error.message }, { status: 500 });
     }

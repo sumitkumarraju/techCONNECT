@@ -1,169 +1,55 @@
-# 🚀 TechConnect
+This is a [Next.js](https://nextjs.org) collaborative coding platform project.
 
-An interactive real-time collaborative coding platform for students to build projects, solve challenges, and grow together.
+## Database (MongoDB Atlas)
 
-🚧 **Status:** Under active development (Building in public)
+The app is configured to use MongoDB Atlas via `MONGO_URI`.
 
----
+Set this in both:
+- `techCONNECT/.env`
+- `techCONNECT/backend/.env`
 
-## 📌 Table of Contents
-
-- [About the Project](#about-the-project)
-- [Key Features](#key-features)
-- [Tech Stack](#tech-stack)
-- [System Architecture](#system-architecture)
-- [Getting Started](#getting-started)
-- [Environment Variables](#environment-variables)
-- [Running the Project](#running-the-project)
-- [Project Structure](#project-structure)
-- [Roadmap](#roadmap)
-- [Contributing](#contributing)
-- [License](#license)
-
----
-
-## 📖 About the Project
-
-**TechConnect** is designed to help students collaborate on real-world coding projects through a shared workspace with real-time editing, AI-assisted development, discussions, and coding challenges.
-
-The platform focuses on:
-- Practical learning  
-- Team collaboration  
-- Networking among aspiring developers  
-
----
-
-## ✨ Key Features
-
-- 👥 Real-time collaborative workspace  
-- 💻 VS Code–like editor (Monaco Editor)  
-- 🤖 AI-powered coding assistant  
-- ▶️ Run code with live terminal output  
-- 🧠 Version history & rollback  
-- 💬 Project discussions & community forums  
-- 🏆 Coding challenges & leaderboards  
-- 🔐 Secure authentication & role-based access  
-
----
-
-## 🛠️ Tech Stack
-
-### Frontend
-- Next.js (App Router)
-- React
-- Tailwind CSS
-- Monaco Editor
-
-### Backend
-- Next.js API Routes
-- Socket.IO (real-time collaboration)
-
-### Database
-- MongoDB Atlas
-
-### AI
-- OpenAI API (Copilot-like assistant)
-
-### Deployment
-- Vercel (frontend)
-- Custom Socket.IO server (real-time)
-
----
-
-## 🧠 System Architecture
-
-Client (Next.js + Monaco)
-↓
-API Routes (Auth, Projects, AI, Run Code)
-↓
-MongoDB Atlas
-↓
-Socket.IO Server (Live collaboration)
-
-yaml
-Copy code
-
----
-
-## 🚀 Getting Started
-
-### Prerequisites
-
-- Node.js ≥ 18
-- MongoDB Atlas account
-- OpenAI API key
-
----
-
-## 🔐 Environment Variables
-
-Create a `.env.local` file:
+Example:
 
 ```env
-MONGODB_URI=your_mongodb_atlas_uri
-OPENAI_API_KEY=your_openai_key
-NEXT_PUBLIC_SOCKET_URL=http://localhost:5000
-▶️ Running the Project
-Install dependencies
-bash
-Copy code
-npm install
-Run development server
-bash
-Copy code
+MONGO_URI=mongodb+srv://<atlas-username>:<atlas-password>@<atlas-cluster>.mongodb.net/techconnect?retryWrites=true&w=majority
+```
+
+Notes:
+- In Atlas Network Access, allow your current IP (or `0.0.0.0/0` for testing only).
+- In Atlas Database Access, create a user with read/write access to `techconnect`.
+- URL-encode special characters in password (e.g. `@` => `%40`).
+
+## Getting Started
+
+First, run the development server:
+
+```bash
 npm run dev
-Run Socket server (if separate)
-bash
-Copy code
-npm run socket
-📂 Project Structure
-csharp
-Copy code
-techconnect/
-│
-├── app/                # Next.js app router
-│   ├── api/            # API routes
-│   ├── workspace/      # Collaborative editor
-│
-├── components/         # Reusable UI components
-├── lib/                # DB, socket, utilities
-├── models/             # Mongoose models
-├── server/             # Socket.IO server
-├── public/             # Static assets
-└── README.md
-🛣️ Roadmap
- Inline AI code suggestions
+# or
+yarn dev
+# or
+pnpm dev
+# or
+bun dev
+```
 
- Multi-language code execution
+Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
 
- Advanced challenge evaluation
+You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
 
- Analytics & user insights
+This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
 
- Public project discovery
+## Learn More
 
-🤝 Contributing
-Contributions are welcome!
+To learn more about Next.js, take a look at the following resources:
 
-Fork the repository
+- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
+- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
 
-Create a new branch
+You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
 
-Commit your changes
+## Deploy on Vercel
 
-Open a Pull Request
+The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
 
-📄 License
-This project is licensed under the MIT License.
-
-markdown
-Copy code
-
----
-
-### ✅ Why this README is strong
-- Recruiter-friendly  
-- Open-source ready  
-- Clear architecture  
-- Scales with your project  
-- Looks **professional** on GitHub
+Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.

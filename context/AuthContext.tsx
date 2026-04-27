@@ -24,6 +24,43 @@ interface AuthContextType {
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
+const getErrorMessage = (error: any): string => {
+  // Network error (server down, DB down, etc.)
+  if (!error.response) {
+    return "Unable to connect to server. Please check your internet connection and try again.";
+  }
+
+  const status = error.response.status;
+  const message = error.response.data?.message;
+  const validationErrors = error.response.data?.errors;
+
+  const firstValidationError =
+    validationErrors?.name?._errors?.[0] ||
+    validationErrors?.username?._errors?.[0] ||
+    validationErrors?.email?._errors?.[0] ||
+    validationErrors?.password?._errors?.[0];
+
+  switch (status) {
+    case 400:
+      return firstValidationError || message || "Invalid input. Please check your details and try again.";
+    case 401:
+      return message || "Invalid email or password.";
+    case 404:
+      return "Account not found. Please register first.";
+    case 409:
+      return message || "An account with this email/username already exists.";
+    case 429:
+      return "Too many attempts. Please wait a moment and try again.";
+    case 500:
+      if (message?.includes("MongoDB") || message?.includes("connect")) {
+        return "Database is temporarily unavailable. Please try again in a moment.";
+      }
+      return "Server error. Please try again later.";
+    default:
+      return message || "Something went wrong. Please try again.";
+  }
+};
+
 export const AuthProvider = ({ children }: { children: ReactNode }) => {
   const [user, setUser] = useState<User | null>(null);
   const [loading, setLoading] = useState(true);
@@ -35,7 +72,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       setUser(data);
       return { success: true };
     } catch (error: any) {
-      return { success: false, error: error.response?.data?.message || "Login failed" };
+      return { success: false, error: getErrorMessage(error) };
     }
   };
 
@@ -46,7 +83,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       setUser(data);
       return { success: true };
     } catch (error: any) {
-      return { success: false, error: error.response?.data?.message || "Registration failed" };
+      return { success: false, error: getErrorMessage(error) };
     }
   };
 
@@ -62,7 +99,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       const { data } = await API.get("/auth/me");
       setUser({ ...data, token });
     } catch (error) {
-      console.warn("Auth check failed, logging out...", error);
+      // Silently handle auth failures on load (user just isn't logged in)
       logout();
     } finally {
       setLoading(false);

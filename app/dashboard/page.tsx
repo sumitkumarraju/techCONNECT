@@ -8,12 +8,16 @@ import { useRouter } from "next/navigation";
 import { motion } from "framer-motion";
 
 export default function Dashboard() {
-  const { user, loading } = useAuth();
-  const [projects, setProjects] = useState<any[]>([]); // Initialize as empty array
+  const { user, loading, logout } = useAuth();
+  const [projects, setProjects] = useState<any[]>([]);
   const [showNewProjectModal, setShowNewProjectModal] = useState(false);
+  const [showJoinModal, setShowJoinModal] = useState(false);
   const [newProjectName, setNewProjectName] = useState("");
   const [newProjectDesc, setNewProjectDesc] = useState("");
   const [isCreating, setIsCreating] = useState(false);
+  const [joinCode, setJoinCode] = useState("");
+  const [joinError, setJoinError] = useState("");
+  const [isJoining, setIsJoining] = useState(false);
   const router = useRouter();
 
   useEffect(() => {
@@ -26,7 +30,6 @@ export default function Dashboard() {
       const fetchProjects = async () => {
         try {
           const res = await API.get("/projects/my");
-          // Ensure response data is an array before setting
           if (Array.isArray(res.data)) {
             setProjects(res.data);
           } else {
@@ -35,7 +38,7 @@ export default function Dashboard() {
           }
         } catch (err) {
           console.error(err);
-          setProjects([]); // Fallback to empty array on error
+          setProjects([]);
         }
       };
       fetchProjects();
@@ -51,17 +54,36 @@ export default function Dashboard() {
       const { data } = await API.post("/projects", {
         name: newProjectName,
         description: newProjectDesc,
-        isPublic: false // Default to private
+        isPublic: false
       });
       setProjects([data, ...projects]);
       setShowNewProjectModal(false);
       setNewProjectName("");
       setNewProjectDesc("");
-      router.push(`/projects/${data._id}`); // Direct access to workspace after creation
+      router.push(`/projects/${data._id}`);
     } catch (error) {
       console.error("Failed to create project", error);
     } finally {
       setIsCreating(false);
+    }
+  };
+
+  const handleJoinByCode = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (joinCode.length !== 6) return;
+
+    setIsJoining(true);
+    setJoinError("");
+
+    try {
+      const { data } = await API.post("/projects/join-by-code", { code: joinCode });
+      setShowJoinModal(false);
+      setJoinCode("");
+      router.push(`/projects/${data.projectId}`);
+    } catch (err: any) {
+      setJoinError(err.response?.data?.message || err.response?.data?.error || "Invalid room code");
+    } finally {
+      setIsJoining(false);
     }
   };
 
@@ -84,7 +106,7 @@ export default function Dashboard() {
               Welcome back, <span className="text-jules-accent">{user?.name}</span>
             </h1>
           </div>
-          <div className="flex gap-4">
+          <div className="flex gap-4 items-center">
             <Link href="/explore" className="px-5 py-2.5 rounded-none font-bold text-sm bg-jules-surface border border-jules-border hover:bg-jules-border/50 transition-all shadow-[4px_4px_0px_0px_#2A0A55] hover:shadow-none hover:translate-y-0.5">
               Explore
             </Link>
@@ -94,6 +116,12 @@ export default function Dashboard() {
             <Link href="/leaderboard" className="px-5 py-2.5 rounded-none font-bold text-sm bg-jules-surface border border-jules-border hover:bg-jules-border/50 transition-all shadow-[4px_4px_0px_0px_#2A0A55] hover:shadow-none hover:translate-y-0.5">
               Leaderboard
             </Link>
+            <button
+              onClick={logout}
+              className="px-4 py-2.5 rounded-none font-bold text-sm text-red-400 bg-jules-surface border border-red-500/30 hover:bg-red-500/10 transition-all"
+            >
+              Logout
+            </button>
           </div>
         </header>
 
@@ -104,25 +132,42 @@ export default function Dashboard() {
               <p className="text-jules-primary/60 text-sm">Review your active projects and workspaces.</p>
             </div>
 
-            <button
-              onClick={() => setShowNewProjectModal(true)}
-              className="bg-jules-accent text-jules-bg px-6 py-3 font-bold shadow-[6px_6px_0px_0px_#2A0A55] hover:shadow-none hover:translate-y-1 transition-all border-2 border-transparent hover:border-jules-primary/20"
-            >
-              + New Project
-            </button>
+            <div className="flex gap-3">
+              <button
+                onClick={() => setShowJoinModal(true)}
+                className="bg-blue-600 text-white px-6 py-3 font-bold shadow-[6px_6px_0px_0px_#1e3a5f] hover:shadow-none hover:translate-y-1 transition-all border-2 border-transparent hover:border-blue-400/30"
+              >
+                🔑 Join Project
+              </button>
+              <button
+                onClick={() => setShowNewProjectModal(true)}
+                className="bg-jules-accent text-jules-bg px-6 py-3 font-bold shadow-[6px_6px_0px_0px_#2A0A55] hover:shadow-none hover:translate-y-1 transition-all border-2 border-transparent hover:border-jules-primary/20"
+              >
+                + New Project
+              </button>
+            </div>
           </div>
 
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
             {projects.length === 0 ? (
               <div className="col-span-full py-20 text-center bg-jules-surface/30 border-2 border-dashed border-jules-border/50 rounded-lg">
                 <p className="text-xl font-bold text-jules-muted mb-2">No projects yet</p>
-                <p className="text-sm text-jules-primary/50 mb-6">Create your first project to get started.</p>
-                <button
-                  onClick={() => setShowNewProjectModal(true)}
-                  className="text-jules-accent font-bold hover:underline"
-                >
-                  Create a Project
-                </button>
+                <p className="text-sm text-jules-primary/50 mb-6">Create your first project or join one with a room code.</p>
+                <div className="flex gap-4 justify-center">
+                  <button
+                    onClick={() => setShowJoinModal(true)}
+                    className="text-blue-400 font-bold hover:underline"
+                  >
+                    Join with Code
+                  </button>
+                  <span className="text-jules-muted">or</span>
+                  <button
+                    onClick={() => setShowNewProjectModal(true)}
+                    className="text-jules-accent font-bold hover:underline"
+                  >
+                    Create a Project
+                  </button>
+                </div>
               </div>
             ) : (
               projects.map((p: any) => (
@@ -131,7 +176,12 @@ export default function Dashboard() {
                   key={p._id}
                   className="group block bg-jules-surface/50 border border-jules-border hover:border-jules-accent p-6 relative transition-all hover:-translate-y-1 hover:shadow-[8px_8px_0px_0px_#2A0A55]"
                 >
-                  <div className="absolute top-4 right-4">
+                  <div className="absolute top-4 right-4 flex gap-2 items-center">
+                    {p.roomCode && (
+                      <span className="text-[10px] font-mono font-bold text-blue-400 bg-blue-400/10 px-2 py-1 rounded-full border border-blue-400/20">
+                        {p.roomCode}
+                      </span>
+                    )}
                     {p.isPublic ? (
                       <span className="text-[10px] font-bold uppercase tracking-wider text-green-400 bg-green-400/10 px-2 py-1 rounded-full border border-green-400/20">Public</span>
                     ) : (
@@ -142,7 +192,7 @@ export default function Dashboard() {
                   <p className="text-sm text-jules-primary/60 line-clamp-2 h-10 mb-4">{p.description || "No description provided."}</p>
 
                   <div className="flex items-center justify-between text-xs text-jules-primary/40 pt-4 border-t border-jules-border/30">
-                    <span>Updated recently</span>
+                    <span>{p.members?.length || 1} member{(p.members?.length || 1) !== 1 ? 's' : ''}</span>
                     <span className="font-bold group-hover:text-jules-accent">Open Workspace &rarr;</span>
                   </div>
                 </Link>
@@ -197,6 +247,62 @@ export default function Dashboard() {
                   className="flex-1 bg-jules-accent text-jules-bg font-bold py-3 hover:bg-white transition-colors disabled:opacity-50"
                 >
                   {isCreating ? "Creating..." : "Create Project"}
+                </button>
+              </div>
+            </form>
+          </motion.div>
+        </div>
+      )}
+
+      {/* Join Project Modal */}
+      {showJoinModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+          <div className="absolute inset-0 bg-black/80 backdrop-blur-sm" onClick={() => { setShowJoinModal(false); setJoinCode(""); setJoinError(""); }}></div>
+          <motion.div
+            initial={{ opacity: 0, scale: 0.95 }}
+            animate={{ opacity: 1, scale: 1 }}
+            className="bg-jules-surface border border-jules-border p-8 w-full max-w-md relative z-10 shadow-[0_0_50px_rgba(59,130,246,0.2)] rounded-xl"
+          >
+            <div className="text-center mb-6">
+              <div className="text-4xl mb-3">🔑</div>
+              <h2 className="text-2xl font-bold">Join a Project</h2>
+              <p className="text-sm text-jules-muted mt-2">Enter the 6-character room code</p>
+            </div>
+
+            <form onSubmit={handleJoinByCode} className="space-y-5">
+              <input
+                type="text"
+                className="w-full text-center text-3xl font-mono font-black tracking-[0.4em] bg-[#0A0A23] border-2 border-jules-border rounded-xl px-4 py-5 text-white placeholder-gray-700 focus:outline-none focus:border-blue-500 transition-colors uppercase"
+                placeholder="XXXXXX"
+                value={joinCode}
+                onChange={(e) => {
+                  setJoinCode(e.target.value.toUpperCase().replace(/[^A-Z0-9]/g, "").slice(0, 6));
+                  setJoinError("");
+                }}
+                maxLength={6}
+                autoFocus
+              />
+
+              {joinError && (
+                <div className="text-sm text-center p-2 rounded bg-red-500/10 text-red-400 border border-red-500/20">
+                  {joinError}
+                </div>
+              )}
+
+              <div className="flex gap-4">
+                <button
+                  type="button"
+                  onClick={() => { setShowJoinModal(false); setJoinCode(""); setJoinError(""); }}
+                  className="flex-1 py-3 font-bold text-jules-muted hover:text-white transition-colors"
+                >
+                  Cancel
+                </button>
+                <button
+                  type="submit"
+                  disabled={joinCode.length !== 6 || isJoining}
+                  className="flex-1 bg-blue-600 text-white font-bold py-3 rounded-lg hover:bg-blue-500 transition-colors disabled:opacity-40"
+                >
+                  {isJoining ? "Joining..." : "Join"}
                 </button>
               </div>
             </form>

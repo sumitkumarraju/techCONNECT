@@ -43,7 +43,13 @@ export const challengeSchema = z.object({
 export const submissionSchema = z.object({
     challengeId: z.string(),
     code: z.string().min(1, "Code cannot be empty"),
-    language: z.enum(["javascript", "python", "java", "cpp"]).default("javascript")
+    language: z.enum([
+        "javascript", "typescript", "python", "java", "c", "cpp", "c++",
+        "csharp", "c#", "go", "rust", "ruby", "php", "swift", "kotlin",
+        "bash", "shell", "lua", "perl", "r", "scala", "dart", "elixir",
+        "haskell", "clojure", "coffeescript", "fortran", "groovy", "pascal",
+        "prolog", "racket", "sql", "sqlite3", "plaintext"
+    ]).default("javascript")
 });
 
 export const discussionSchema = z.object({

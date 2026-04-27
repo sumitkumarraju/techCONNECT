@@ -8,13 +8,14 @@ interface CodeEditorProps {
     file: any;
     onCodeChange: (value: string) => void;
     onSave?: () => void;
+    readOnly?: boolean;
 }
 
 export interface CodeEditorHandle {
     insertCode: (text: string) => void;
 }
 
-const CodeEditor = forwardRef<CodeEditorHandle, CodeEditorProps>(({ file, onCodeChange, onSave }, ref) => {
+const CodeEditor = forwardRef<CodeEditorHandle, CodeEditorProps>(({ file, onCodeChange, onSave, readOnly = false }, ref) => {
     const editorRef = useRef<any>(null);
     const isRemoteUpdate = useRef(false);
 
@@ -154,6 +155,11 @@ const CodeEditor = forwardRef<CodeEditorHandle, CodeEditorProps>(({ file, onCode
                     <div className="w-3 h-3 rounded-full bg-green-500/20 border border-green-500/50"></div>
                 </div>
                 <span className="text-xs text-zinc-400 ml-2 font-mono">{file.name}</span>
+                {readOnly && (
+                    <span className="ml-auto text-[10px] font-bold uppercase tracking-wider text-amber-400 bg-amber-400/10 px-2 py-0.5 rounded border border-amber-400/20">
+                        View Only
+                    </span>
+                )}
             </div>
             <div className="flex-1 overflow-hidden">
                 <Editor
@@ -177,7 +183,9 @@ const CodeEditor = forwardRef<CodeEditorHandle, CodeEditorProps>(({ file, onCode
                         fontSize: 14,
                         padding: { top: 16, bottom: 16 },
                         fontFamily: "JetBrains Mono, monospace",
-                        automaticLayout: true
+                        automaticLayout: true,
+                        readOnly: readOnly,
+                        domReadOnly: readOnly
                     }}
                 />
             </div>
