@@ -1,55 +1,124 @@
-This is a [Next.js](https://nextjs.org) collaborative coding platform project.
+# techCONNECT
 
-## Database (MongoDB Atlas)
+Real-time collaborative coding platform for students and developers to build projects together with AI-assisted workflows.
 
-The app is configured to use MongoDB Atlas via `MONGO_URI`.
+## What is new
 
-Set this in both:
+- Room-code based project joining (`/join` flow + dashboard join modal)
+- Resilient real-time presence with join/leave notifications
+- Notification center in workspace for room and AI events
+- AI assistant with:
+  - model selection (NVIDIA-hosted models)
+  - current-file or project-wide context scope
+  - manual/auto apply modes
+  - per-file apply, apply-all, preview, copy, history, rollback
+  - quality gate checks before apply
+- HTML live preview support in editor (button-triggered)
+- Resizable workspace panes (explorer, editor, preview, right sidebar)
+- MongoDB Atlas-ready configuration
+
+## Core features
+
+- Real-time collaboration (code, messages, presence) via Socket.IO
+- Monaco editor workspace with autosave and file management
+- Role-based project permissions (owner/editor/viewer)
+- Version snapshots and rollback for code files
+- Multi-language code execution endpoint
+- Community, discussions, challenges, profile and leaderboard APIs
+
+## Tech stack
+
+- **Frontend**: Next.js App Router, React, Tailwind CSS, Monaco Editor
+- **Backend**: Next.js API routes + separate Socket.IO server
+- **Database**: MongoDB / MongoDB Atlas (Mongoose)
+- **Testing**: Jest (unit), Playwright (E2E)
+
+## Project structure
+
+```text
+techCONNECT/
+  app/                   # Next.js routes, API routes, pages
+  backend/               # Socket.IO server
+  components/            # UI and editor components
+  context/               # Auth context
+  lib/                   # DB, API client, auth helpers, socket client
+  models/                # Mongoose models
+  __tests__/             # Unit tests
+  e2e/                   # Playwright tests
+```
+
+## Environment setup
+
+Create environment files:
+
 - `techCONNECT/.env`
 - `techCONNECT/backend/.env`
 
-Example:
+Required values:
 
 ```env
-MONGO_URI=mongodb+srv://<atlas-username>:<atlas-password>@<atlas-cluster>.mongodb.net/techconnect?retryWrites=true&w=majority
+MONGO_URI=mongodb+srv://<atlas-username>:<atlas-password>@<atlas-cluster>.mongodb.net/techconnect?retryWrites=true&w=majority&appName=Cluster0
+JWT_SECRET=<strong-random-secret>
+NEXT_PUBLIC_SOCKET_URL=http://localhost:5001
+
+NVIDIA_API_KEY=<your-nvidia-key>
+NVIDIA_BASE_URL=https://integrate.api.nvidia.com/v1
+NVIDIA_MODEL=minimaxai/minimax-m2.7
 ```
 
-Notes:
-- In Atlas Network Access, allow your current IP (or `0.0.0.0/0` for testing only).
-- In Atlas Database Access, create a user with read/write access to `techconnect`.
-- URL-encode special characters in password (e.g. `@` => `%40`).
+### MongoDB Atlas notes
 
-## Getting Started
+- Add your machine IP in Atlas Network Access
+- Create DB user with access to `techconnect`
+- URL-encode special characters in password (example `@` => `%40`)
 
-First, run the development server:
+## Run locally
+
+Install dependencies:
+
+```bash
+npm install
+```
+
+Start Next.js app:
 
 ```bash
 npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+Start Socket server:
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+```bash
+cd backend
+node server.js
+```
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+Open:
 
-## Learn More
+- App: `http://localhost:3000` (or custom port you run)
+- Socket health: `http://localhost:5001/health`
 
-To learn more about Next.js, take a look at the following resources:
+## Test and quality checks
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+```bash
+npm run lint
+npx tsc --noEmit
+npm test -- --runInBand
+```
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+Run E2E:
 
-## Deploy on Vercel
+```bash
+npx playwright test
+```
 
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
+## Deployment notes
 
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+- Frontend: Vercel
+- Realtime socket server: separate Node deployment
+- Ensure production `NEXT_PUBLIC_SOCKET_URL` points to deployed socket host
+- Configure env vars in Vercel project settings
+
+## Additional docs
+
+- Full project build report: `PROJECT-REPORT.md`
