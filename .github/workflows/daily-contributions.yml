@@ -1,0 +1,31 @@
+name: Daily Contributions
+
+on:
+  schedule:
+    - cron: '0 0 * * *' # Runs at midnight UTC every day
+  workflow_dispatch: # Allow manual triggering
+
+jobs:
+  contribute:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          ref: main
+
+      - name: Create 10 commits
+        run: |
+          git config --global user.name "${{ github.actor }}"
+          git config --global user.email "${{ github.actor_id }}+${{ github.actor }}@users.noreply.github.com"
+
+          for i in {1..10}
+          do
+            echo "Contribution $(date +'%Y-%m-%d %H:%M:%S') - Commit $i" >> contribution-log.txt
+            git add contribution-log.txt
+            git commit -m "Daily contribution $(date +'%Y-%m-%d') - Commit $i"
+          done
+
+          git push origin main
