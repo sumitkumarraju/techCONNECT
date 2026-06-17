@@ -1,0 +1,29 @@
+name: Daily Contributions
+
+on:
+  schedule:
+    - cron: '0 0 * * *'
+
+jobs:
+  contribute:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          ref: main
+
+      - name: Generate 10 Commits
+        run: |
+          git config --global user.name "${{ github.actor }}"
+          git config --global user.email "${{ github.actor_id }}+${{ github.actor }}@users.noreply.github.com"
+
+          for i in {1..10}; do
+            echo "Contribution on $(date) - commit $i" >> contribution-log.txt
+            git add contribution-log.txt
+            git commit -m "chore: daily contribution $i"
+          done
+
+          git push origin main
