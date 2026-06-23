@@ -1,0 +1,33 @@
+name: Daily Contributions
+
+on:
+  schedule:
+    - cron: '0 0 * * *' # Runs daily at midnight UTC
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  contribute:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          ref: main
+
+      - name: Configure Git
+        run: |
+          git config --global user.email "${{ github.actor_id }}+${{ github.actor }}@users.noreply.github.com"
+          git config --global user.name "${{ github.actor }}"
+
+      - name: Make 10 commits
+        run: |
+          for i in {1..10}
+          do
+            echo "Daily contribution loop $i at $(date)" >> contribution-log.txt
+            git add contribution-log.txt
+            git commit -m "Automated contribution commit $i: $(date)"
+          done
+          git push origin main
