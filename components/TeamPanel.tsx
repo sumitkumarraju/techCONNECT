@@ -19,7 +19,7 @@ interface TeamPanelProps {
     members: Member[];
     currentUserId: string;
     currentUserRole: 'owner' | 'editor' | 'viewer';
-    onlineUsers: any[];
+    onlineUsers: { _id: string }[];
     onMembersChange: () => void;
     onInviteClick: () => void;
 }
@@ -43,7 +43,7 @@ export default function TeamPanel({
     const [isUpdating, setIsUpdating] = useState<string | null>(null);
 
     const isOnline = (userId: string) => {
-        return onlineUsers.some((u: any) => u._id === userId);
+        return onlineUsers.some((u: { _id: string }) => u._id === userId);
     };
 
     const handleRoleChange = async (memberId: string, newRole: 'editor' | 'viewer') => {
