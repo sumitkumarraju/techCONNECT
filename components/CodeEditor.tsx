@@ -165,15 +165,6 @@ const CodeEditor = forwardRef<CodeEditorHandle, CodeEditorProps>(({ file, onCode
                 <Editor
                     height="100%"
                     language={file.language || 'javascript'}
-                    // value={file.content} // Controlled value from parent potentially? No, using setValue. 
-                    // Actually, if we pass `value` prop, it becomes controlled. 
-                    // To use setValue manually, better to use `defaultValue` or let `useEffect` handle it.
-                    // But Monaco `value` prop is safe if we ignore echo.
-                    // Let's remove `value` prop to avoid conflict with setValue? 
-                    // No, `value={file.content}` ensures initial load.
-                    // But for real-time, `setValue` is better.
-                    // I will use `defaultValue` + `useEffect` (above) for file switching.
-                    // Removing `value` prop to let `setValue` take full control.
                     defaultValue={file.content}
                     theme="vs-dark"
                     onMount={handleEditorDidMount}
