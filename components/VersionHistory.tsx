@@ -1,7 +1,16 @@
 import React from 'react';
 
+export interface FileVersion {
+    _id: string;
+    content: string;
+    createdAt: string;
+    createdBy?: {
+        username?: string;
+    };
+}
+
 interface VersionHistoryProps {
-    versions: any[];
+    versions: FileVersion[];
     isLoading: boolean;
     onRestore: (versionId: string) => void;
     onPreview: (content: string) => void;

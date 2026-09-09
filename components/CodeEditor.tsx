@@ -4,8 +4,18 @@ import React, { useRef, useEffect, useImperativeHandle, forwardRef } from "react
 import Editor, { OnMount } from "@monaco-editor/react";
 import socket from "@/lib/socket";
 
+export interface ProjectFile {
+    _id?: string;
+    projectId?: string;
+    name: string;
+    content: string;
+    language?: string;
+    createdAt?: string;
+    updatedAt?: string;
+}
+
 interface CodeEditorProps {
-    file: any;
+    file: ProjectFile | null;
     onCodeChange: (value: string) => void;
     onSave?: () => void;
     readOnly?: boolean;
@@ -16,6 +26,7 @@ export interface CodeEditorHandle {
 }
 
 const CodeEditor = forwardRef<CodeEditorHandle, CodeEditorProps>(({ file, onCodeChange, onSave, readOnly = false }, ref) => {
+    // any is needed for standalone monaco editor ref unless we import full monaco types which we don't have
     const editorRef = useRef<any>(null);
     const isRemoteUpdate = useRef(false);
 
@@ -24,27 +35,28 @@ const CodeEditor = forwardRef<CodeEditorHandle, CodeEditorProps>(({ file, onCode
             if (editorRef.current) {
                 const editor = editorRef.current;
                 const selection = editor.getSelection();
-                // const id = { major: 1, minor: 1 }; // Not strictly needed for executeEdits
-                const op = { range: selection, text: text, forceMoveMarkers: true };
-                editor.executeEdits("my-source", [op]);
-                editor.focus();
+                if (selection) {
+                    const op = { range: selection, text: text, forceMoveMarkers: true };
+                    editor.executeEdits("my-source", [op]);
+                    editor.focus();
+                }
             }
         }
     }));
 
-    const handleEditorDidMount: OnMount = (editor, monaco) => {
+    const handleEditorDidMount: OnMount = (editor, monacoInstance) => {
         editorRef.current = editor;
 
         // Custom Keybinding for Ctrl+S / Cmd+S
-        editor.addCommand(monaco.KeyMod.CtrlCmd | monaco.KeyCode.KeyS, () => {
+        editor.addCommand(monacoInstance.KeyMod.CtrlCmd | monacoInstance.KeyCode.KeyS, () => {
             if (onSave) {
                 onSave();
             }
         });
 
         // Emit Cursor Position
-        editor.onDidChangeCursorPosition((e) => {
-            if (file) {
+        editor.onDidChangeCursorPosition((e: any) => {
+            if (file && file.projectId) {
                 socket.emit("cursor-move", {
                     projectId: file.projectId,
                     cursor: {
@@ -56,20 +68,17 @@ const CodeEditor = forwardRef<CodeEditorHandle, CodeEditorProps>(({ file, onCode
         });
 
         // Listen for remote cursors
-        socket.on("cursor-update", ({ socketId, cursor }) => {
-            // Visualize cursor using markers (as requested)
-            // Note: For a richer experience, deltaDecorations with CSS is preferred, 
-            // but markers are a quick way to show "presence" logic working.
+        socket.on("cursor-update", ({ socketId, cursor }: any) => {
             const model = editor.getModel();
             if (model) {
-                monaco.editor.setModelMarkers(model, `cursor-${socketId}`, [
+                monacoInstance.editor.setModelMarkers(model, `cursor-${socketId}`, [
                     {
                         startLineNumber: cursor.line,
                         startColumn: cursor.column,
                         endLineNumber: cursor.line,
                         endColumn: cursor.column + 1,
-                        message: `User ${socketId.substring(0, 4)}`, // Basic ID display
-                        severity: monaco.MarkerSeverity.Info,
+                        message: `User ${socketId.substring(0, 4)}`,
+                        severity: monacoInstance.MarkerSeverity.Info,
                     },
                 ]);
             }
@@ -77,8 +86,7 @@ const CodeEditor = forwardRef<CodeEditorHandle, CodeEditorProps>(({ file, onCode
 
         // Listen for code updates from other users
         socket.on("code-update", ({ fileId, content }: { fileId: string; content: string }) => {
-            // Only update if this event is for the CURRENTLY open file
-            if (fileId === file._id) {
+            if (file && file._id && fileId === file._id) {
                 if (content !== editor.getValue()) {
                     isRemoteUpdate.current = true;
                     const position = editor.getPosition();
@@ -92,11 +100,9 @@ const CodeEditor = forwardRef<CodeEditorHandle, CodeEditorProps>(({ file, onCode
 
     const handleEditorChange = (value: string | undefined) => {
         if (value !== undefined) {
-            // 1. Update Parent State (for saving etc)
             onCodeChange(value);
 
-            // 2. Emit to Socket (if not a remote update)
-            if (!isRemoteUpdate.current && file) {
+            if (!isRemoteUpdate.current && file && file.projectId && file._id) {
                 socket.emit("code-change", {
                     projectId: file.projectId,
                     fileId: file._id,
@@ -106,14 +112,8 @@ const CodeEditor = forwardRef<CodeEditorHandle, CodeEditorProps>(({ file, onCode
         }
     };
 
-    // Update editor content when file changes (switching files)
     useEffect(() => {
-        if (editorRef.current && file) {
-            // Unsubscribe from previous file updates (handled by parent joining/leaving rooms ideally, 
-            // but here we just ensure we listen. Actually socket.on is global.
-            // We should cleanup on unmount.
-
-            // Inform server we opened this file
+        if (editorRef.current && file && file._id && file.projectId) {
             socket.emit("file-open", {
                 projectId: file.projectId,
                 fileId: file._id
@@ -127,7 +127,7 @@ const CodeEditor = forwardRef<CodeEditorHandle, CodeEditorProps>(({ file, onCode
             }
         }
         // eslint-disable-next-line react-hooks/exhaustive-deps
-    }, [file?._id]); // Only reset when ID changes
+    }, [file?._id]);
 
     useEffect(() => {
         return () => {
@@ -165,15 +165,6 @@ const CodeEditor = forwardRef<CodeEditorHandle, CodeEditorProps>(({ file, onCode
                 <Editor
                     height="100%"
                     language={file.language || 'javascript'}
-                    // value={file.content} // Controlled value from parent potentially? No, using setValue. 
-                    // Actually, if we pass `value` prop, it becomes controlled. 
-                    // To use setValue manually, better to use `defaultValue` or let `useEffect` handle it.
-                    // But Monaco `value` prop is safe if we ignore echo.
-                    // Let's remove `value` prop to avoid conflict with setValue? 
-                    // No, `value={file.content}` ensures initial load.
-                    // But for real-time, `setValue` is better.
-                    // I will use `defaultValue` + `useEffect` (above) for file switching.
-                    // Removing `value` prop to let `setValue` take full control.
                     defaultValue={file.content}
                     theme="vs-dark"
                     onMount={handleEditorDidMount}
