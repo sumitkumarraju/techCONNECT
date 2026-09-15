@@ -1,33 +1,23 @@
 import { NextRequest, NextResponse } from 'next/server';
 import connectDB from '@/lib/db';
 import Project from '@/models/Project';
-import jwt from 'jsonwebtoken';
+import { getDataFromToken } from "@/lib/auth";
+import { ApiError, handleApiError } from '@/lib/api-error';
 
 export const dynamic = 'force-dynamic';
-
-const getDataFromToken = (req: NextRequest) => {
-    try {
-        const token = req.headers.get("Authorization")?.split(" ")[1];
-        if (!token) return null;
-        const decoded: any = jwt.verify(token, process.env.JWT_SECRET || 'devsecret');
-        return decoded.id;
-    } catch (error: any) {
-        return null;
-    }
-}
 
 export async function GET(req: NextRequest, { params }: { params: { id: string } }) {
     try {
         await connectDB();
         const userId = getDataFromToken(req);
         if (!userId) {
-            return NextResponse.json({ message: "Not authorized" }, { status: 401 });
+            throw new ApiError("Not authorized", 401);
         }
 
         const project = await Project.findById(params.id);
 
         if (!project) {
-            return NextResponse.json({ message: "Project not found" }, { status: 404 });
+            throw new ApiError("Project not found", 404);
         }
 
         // Check if user is owner
@@ -38,7 +28,7 @@ export async function GET(req: NextRequest, { params }: { params: { id: string }
         const isMember = isOwner || !!memberEntry;
 
         if (!isMember && !project.isPublic) {
-            return NextResponse.json({ message: "Access denied" }, { status: 403 });
+            throw new ApiError("Access denied", 403);
         }
 
         // Determine user's role
@@ -53,8 +43,8 @@ export async function GET(req: NextRequest, { params }: { params: { id: string }
             ...project.toObject(),
             userRole // Include the current user's role in response
         });
-    } catch (error: any) {
-        return NextResponse.json({ message: error.message }, { status: 500 });
+    } catch (error) {
+        return handleApiError(error);
     }
 }
 
@@ -63,17 +53,17 @@ export async function PUT(req: NextRequest, { params }: { params: { id: string }
         await connectDB();
         const userId = getDataFromToken(req);
         if (!userId) {
-            return NextResponse.json({ message: "Not authorized" }, { status: 401 });
+            throw new ApiError("Not authorized", 401);
         }
 
         const project = await Project.findById(params.id);
 
         if (!project) {
-            return NextResponse.json({ message: "Project not found" }, { status: 404 });
+            throw new ApiError("Project not found", 404);
         }
 
         if (project.ownerId.toString() !== userId) {
-            return NextResponse.json({ message: "Only owner can update project" }, { status: 403 });
+            throw new ApiError("Only owner can update project", 403);
         }
 
         const body = await req.json();
@@ -84,8 +74,8 @@ export async function PUT(req: NextRequest, { params }: { params: { id: string }
 
         await project.save();
         return NextResponse.json(project);
-    } catch (error: any) {
-        return NextResponse.json({ message: error.message }, { status: 500 });
+    } catch (error) {
+        return handleApiError(error);
     }
 }
 
@@ -94,22 +84,22 @@ export async function DELETE(req: NextRequest, { params }: { params: { id: strin
         await connectDB();
         const userId = getDataFromToken(req);
         if (!userId) {
-            return NextResponse.json({ message: "Not authorized" }, { status: 401 });
+            throw new ApiError("Not authorized", 401);
         }
 
         const project = await Project.findById(params.id);
 
         if (!project) {
-            return NextResponse.json({ message: "Project not found" }, { status: 404 });
+            throw new ApiError("Project not found", 404);
         }
 
         if (project.ownerId.toString() !== userId) {
-            return NextResponse.json({ message: "Only owner can delete project" }, { status: 403 });
+            throw new ApiError("Only owner can delete project", 403);
         }
 
         await project.deleteOne();
         return NextResponse.json({ message: "Project deleted successfully" });
-    } catch (error: any) {
-        return NextResponse.json({ message: error.message }, { status: 500 });
+    } catch (error) {
+        return handleApiError(error);
     }
 }

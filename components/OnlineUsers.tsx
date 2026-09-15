@@ -1,6 +1,19 @@
 import React from "react";
 
-export default function OnlineUsers({ users }: { users: any[] }) {
+export interface OnlineUser {
+    _id?: string;
+    id?: string;
+    name?: string;
+    username?: string;
+    color?: string;
+    socketId?: string;
+}
+
+interface OnlineUsersProps {
+    users: OnlineUser[];
+}
+
+export default function OnlineUsers({ users }: OnlineUsersProps) {
     const count = users.length;
     const statusText = count === 0
         ? "No one in room"
@@ -17,13 +30,13 @@ export default function OnlineUsers({ users }: { users: any[] }) {
                         key={i}
                         className="w-8 h-8 rounded-full flex items-center justify-center text-xs font-bold text-white ring-2 ring-[#0A0A23] relative group cursor-pointer"
                         style={{ background: u.color || '#6366f1' }}
-                        title={u.name}
+                        title={u.name || u.username || 'User'}
                     >
-                        {u.name?.[0]?.toUpperCase()}
+                        {(u.name || u.username || 'U')[0]?.toUpperCase()}
 
                         {/* Tooltip */}
                         <div className="absolute -bottom-8 left-1/2 -translate-x-1/2 bg-black text-white text-[10px] px-2 py-1 rounded opacity-0 group-hover:opacity-100 transition-opacity whitespace-nowrap pointer-events-none z-50">
-                            {u.name}
+                            {u.name || u.username || 'User'}
                         </div>
                     </div>
                 ))}
