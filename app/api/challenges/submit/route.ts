@@ -6,21 +6,12 @@ import { exec } from "child_process";
 import fs from "fs";
 import path from "path";
 import util from 'util';
-import jwt from 'jsonwebtoken';
 import { submissionSchema } from "@/lib/validations";
+import { getDataFromToken } from '@/lib/auth-server';
+
 
 const execPromise = util.promisify(exec);
 
-const getDataFromToken = (req: NextRequest) => {
-    try {
-        const token = req.headers.get("Authorization")?.split(" ")[1];
-        if (!token) return null;
-        const decoded: any = jwt.verify(token, process.env.JWT_SECRET || 'devsecret');
-        return decoded.id;
-    } catch (error: any) {
-        return null;
-    }
-}
 
 export async function POST(req: NextRequest) {
     try {
@@ -71,16 +62,16 @@ export async function POST(req: NextRequest) {
         try {
             // For each test case, we append a runner script to the user code
             // This is naive but works for simple I/O or function calls
-            // BETTER: User code exports a function, and we require() it. 
+            // BETTER: User code exports a function, and we require() it.
             // LET'S ASSUME: User writes a function solution(input).
 
             for (const test of challenge.testCases) {
                 // Construct runner code
                 const runnerCode = `
                     ${code}
-                    
+
                     try {
-                        const input = ${test.input}; 
+                        const input = ${test.input};
                         const output = solution(input);
                         console.log(JSON.stringify(output));
                     } catch(e) {

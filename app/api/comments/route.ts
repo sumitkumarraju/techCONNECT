@@ -2,19 +2,10 @@ import { NextRequest, NextResponse } from "next/server";
 import dbConnect from "@/lib/db";
 import Comment from "@/models/Comment";
 import Discussion from "@/models/Discussion";
-import jwt from 'jsonwebtoken';
 import { commentSchema } from "@/lib/validations";
+import { getDataFromToken } from '@/lib/auth-server';
 
-const getDataFromToken = (req: NextRequest) => {
-    try {
-        const token = req.headers.get("Authorization")?.split(" ")[1];
-        if (!token) return null;
-        const decoded: any = jwt.verify(token, process.env.JWT_SECRET || 'devsecret');
-        return decoded.id;
-    } catch (error: any) {
-        return null;
-    }
-}
+
 
 export async function POST(req: NextRequest) {
     try {
