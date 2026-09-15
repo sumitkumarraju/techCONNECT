@@ -4,6 +4,7 @@ import User from '@/models/User';
 import bcrypt from 'bcryptjs';
 import jwt from 'jsonwebtoken';
 import { loginSchema } from '@/lib/validations';
+import { handleApiError } from '@/lib/api-error';
 
 export const dynamic = 'force-dynamic';
 
@@ -48,8 +49,7 @@ export async function POST(req: NextRequest) {
             email: user.email,
             token
         });
-    } catch (error: any) {
-        console.error("Login Error:", error);
-        return NextResponse.json({ message: error.message }, { status: 500 });
+    } catch (error) {
+        return handleApiError(error);
     }
 }

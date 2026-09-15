@@ -42,7 +42,9 @@ const connectDB = async (retryCount = 0): Promise<typeof mongoose> => {
         };
 
         cached.promise = mongoose.connect(process.env.MONGO_URI, opts).then((mongoose) => {
-            console.log('✅ MongoDB Connected Successfully to:', process.env.MONGO_URI?.replace(/\/\/.*@/, '//***@'));
+            if (process.env.NODE_ENV === 'development') {
+                console.log('✅ MongoDB Connected Successfully to:', process.env.MONGO_URI?.replace(/\/\/.*@/, '//***@'));
+            }
             return mongoose;
         }).catch(async (err) => {
             console.error(`❌ MongoDB Connection Error (attempt ${retryCount + 1}/${MAX_RETRIES}):`, err.message);
