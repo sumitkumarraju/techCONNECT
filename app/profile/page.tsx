@@ -1,6 +1,7 @@
 "use client";
 import React, { useEffect, useState } from 'react';
 import { useAuth } from '@/context/AuthContext';
+import Image from 'next/image';
 
 import API from "@/lib/api";
 
@@ -67,8 +68,7 @@ export default function ProfilePage() {
             <div className="w-32 h-32 rounded-full bg-black p-1">
               <div className="w-full h-full rounded-full bg-gradient-to-tr from-blue-500 to-purple-500 flex items-center justify-center text-4xl font-bold text-white relative overflow-hidden group">
                 {userAvatar ? (
-                  /* eslint-disable-next-line @next/next/no-img-element */
-                  <img src={userAvatar} alt="Profile" className="w-full h-full object-cover" />
+                  <Image src={userAvatar} alt="Profile" className="w-full h-full object-cover" width={128} height={128} unoptimized />
                 ) : (
                   profile?.username?.substring(0, 2).toUpperCase()
                 )}
