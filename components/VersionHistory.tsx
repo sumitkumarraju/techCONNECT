@@ -1,7 +1,16 @@
 import React from 'react';
 
+interface Version {
+    _id: string;
+    content: string;
+    createdBy?: {
+        username?: string;
+    };
+    createdAt: Date | string;
+}
+
 interface VersionHistoryProps {
-    versions: any[];
+    versions: Version[];
     isLoading: boolean;
     onRestore: (versionId: string) => void;
     onPreview: (content: string) => void;
