@@ -8,9 +8,9 @@ const getDataFromToken = (req: NextRequest) => {
   try {
     const token = req.headers.get("Authorization")?.split(" ")[1];
     if (!token) return null;
-    const decoded: any = jwt.verify(token, process.env.JWT_SECRET || 'devsecret');
-    return decoded.id;
-  } catch (error: any) {
+    const decoded = jwt.verify(token, process.env.JWT_SECRET || 'devsecret') as jwt.JwtPayload;
+    return decoded.id as string | undefined;
+  } catch (error: unknown) {
     return null;
   }
 }
@@ -18,7 +18,7 @@ const getDataFromToken = (req: NextRequest) => {
 export async function GET(req: Request) {
   try {
     await dbConnect();
-    const challenges = await Challenge.find({}).sort({ createdAt: -1 });
+    const challenges = await Challenge.find({}).sort({ createdAt: -1 }).lean();
     return NextResponse.json(challenges);
   } catch (error) {
     return NextResponse.json({ error: "Failed to fetch challenges" }, { status: 500 });
