@@ -1,6 +1,11 @@
 import React from "react";
 
-export default function OnlineUsers({ users }: { users: any[] }) {
+interface User {
+    name?: string;
+    color?: string;
+}
+
+export default function OnlineUsers({ users }: { users: User[] }) {
     const count = users.length;
     const statusText = count === 0
         ? "No one in room"

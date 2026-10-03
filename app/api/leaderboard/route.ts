@@ -33,9 +33,10 @@ export async function GET(req: Request) {
         ]);
 
         // Populate User Details manually since aggregate doesn't support simple populate
+        interface LeaderboardEntry { _id: { _id: string; username: string; name: string; }; totalScore: number; solvedCount: number; }
         const populatedLeaderboard = await User.populate(leaderboard, { path: "_id", select: "username name" });
 
-        return NextResponse.json(populatedLeaderboard.map((entry: any) => ({
+        return NextResponse.json(populatedLeaderboard.map((entry: LeaderboardEntry) => ({
             userId: entry._id._id,
             username: entry._id.username,
             name: entry._id.name,

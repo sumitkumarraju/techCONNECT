@@ -42,7 +42,16 @@ const connectDB = async (retryCount = 0): Promise<typeof mongoose> => {
         };
 
         cached.promise = mongoose.connect(process.env.MONGO_URI, opts).then((mongoose) => {
-            console.log('✅ MongoDB Connected Successfully to:', process.env.MONGO_URI?.replace(/\/\/.*@/, '//***@'));
+            let host = 'unknown';
+            try {
+                if (process.env.MONGO_URI) {
+                    const parsedUrl = new URL(process.env.MONGO_URI);
+                    host = parsedUrl.host;
+                }
+            } catch (e) {
+                host = 'invalid url';
+            }
+            console.log(`✅ MongoDB Connected Successfully to: ${host}`);
             return mongoose;
         }).catch(async (err) => {
             console.error(`❌ MongoDB Connection Error (attempt ${retryCount + 1}/${MAX_RETRIES}):`, err.message);
