@@ -2,19 +2,10 @@ import { NextRequest, NextResponse } from 'next/server';
 import connectDB from '@/lib/db';
 import Project from '@/models/Project';
 import jwt from 'jsonwebtoken';
+import { getDataFromToken } from '@/lib/auth';
 
 export const dynamic = 'force-dynamic';
 
-const getDataFromToken = (req: NextRequest) => {
-    try {
-        const token = req.headers.get("Authorization")?.split(" ")[1];
-        if (!token) return null;
-        const decoded: any = jwt.verify(token, process.env.JWT_SECRET || 'devsecret');
-        return decoded.id;
-    } catch (error: any) {
-        return null;
-    }
-}
 
 export async function GET(req: NextRequest) {
     try {
@@ -29,7 +20,7 @@ export async function GET(req: NextRequest) {
                 { ownerId: userId },
                 { "members.userId": userId }
             ]
-        }).sort({ updatedAt: -1 });
+        }).sort({ updatedAt: -1 }).lean();
 
         return NextResponse.json(projects);
     } catch (error: any) {
