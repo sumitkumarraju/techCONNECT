@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import connectDB from '@/lib/db';
 import User from '@/models/User';
-import jwt from 'jsonwebtoken';
+import { verifyToken } from '@/lib/auth';
 
 export const dynamic = 'force-dynamic';
 
@@ -9,7 +9,8 @@ const getDataFromToken = (req: NextRequest) => {
     try {
         const token = req.headers.get("Authorization")?.split(" ")[1];
         if (!token) return null;
-        const decoded: any = jwt.verify(token, process.env.JWT_SECRET || 'devsecret');
+        const decoded = verifyToken(token);
+        if (!decoded) return null;
         return decoded.id;
     } catch (error: any) {
         return null;

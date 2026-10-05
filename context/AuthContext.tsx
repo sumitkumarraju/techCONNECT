@@ -2,6 +2,7 @@
 
 import { createContext, useContext, useEffect, useState, ReactNode } from "react";
 import API from "@/lib/api";
+import axios from "axios";
 
 interface User {
   _id: string;
@@ -18,15 +19,15 @@ interface AuthContextType {
   user: User | null;
   loading: boolean;
   login: (email: string, password: string) => Promise<{ success: boolean; error?: string }>;
-  register: (formData: any) => Promise<{ success: boolean; error?: string }>;
+  register: (formData: Record<string, string>) => Promise<{ success: boolean; error?: string }>;
   logout: () => void;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
-const getErrorMessage = (error: any): string => {
+const getErrorMessage = (error: unknown): string => {
   // Network error (server down, DB down, etc.)
-  if (!error.response) {
+  if (!axios.isAxiosError(error) || !error.response) {
     return "Unable to connect to server. Please check your internet connection and try again.";
   }
 
@@ -71,18 +72,18 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       localStorage.setItem("token", data.token);
       setUser(data);
       return { success: true };
-    } catch (error: any) {
+    } catch (error: unknown) {
       return { success: false, error: getErrorMessage(error) };
     }
   };
 
-  const register = async (formData: any) => {
+  const register = async (formData: Record<string, string>) => {
     try {
       const { data } = await API.post("/auth/register", formData);
       localStorage.setItem("token", data.token);
       setUser(data);
       return { success: true };
-    } catch (error: any) {
+    } catch (error: unknown) {
       return { success: false, error: getErrorMessage(error) };
     }
   };
