@@ -47,23 +47,7 @@ ProjectSchema.statics.generateRoomCode = async function (): Promise<string> {
 // Auto-generate room code before saving if not set
 ProjectSchema.pre('save', async function (next) {
   if (!this.roomCode) {
-    const chars = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
-    let code: string;
-    let exists = true;
-    let attempts = 0;
-
-    while (exists && attempts < 10) {
-      code = '';
-      const bytes = crypto.randomBytes(6);
-      for (let i = 0; i < 6; i++) {
-        code += chars[bytes[i] % chars.length];
-      }
-      const existing = await mongoose.models.Project?.findOne({ roomCode: code });
-      exists = !!existing;
-      attempts++;
-    }
-
-    this.roomCode = code!;
+    this.roomCode = await (this.constructor as any).generateRoomCode();
   }
   next();
 });
