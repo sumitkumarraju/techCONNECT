@@ -4,10 +4,29 @@ import { useParams } from 'next/navigation';
 import API from "@/lib/api";
 import Link from 'next/link';
 
+
+interface ProfileData {
+    name: string;
+    username: string;
+    bio?: string;
+    skills?: string[];
+    githubUrl?: string;
+    linkedinUrl?: string;
+    avatar?: string;
+    website?: string;
+}
+
+interface ProjectData {
+    _id: string;
+    name: string;
+    description?: string;
+    techStack?: string[];
+}
+
 export default function PublicProfilePage() {
     const { username } = useParams();
-    const [profile, setProfile] = useState<any>(null);
-    const [projects, setProjects] = useState<any[]>([]);
+    const [profile, setProfile] = useState<ProfileData | null>(null);
+    const [projects, setProjects] = useState<ProjectData[]>([]);
     const [isLoading, setIsLoading] = useState(true);
     const [error, setError] = useState("");
 
@@ -62,7 +81,7 @@ export default function PublicProfilePage() {
                         <div className="bg-jules-surface border border-jules-border rounded-2xl p-5">
                             <h3 className="text-sm font-bold uppercase text-jules-muted mb-4">Skills</h3>
                             <div className="flex flex-wrap gap-2">
-                                {profile.skills?.length > 0 ? profile.skills.map((skill: string) => (
+                                {(profile.skills && profile.skills.length > 0) ? profile.skills.map((skill: string) => (
                                     <span key={skill} className="text-xs bg-[#2a2a2a] px-3 py-1 rounded-full text-white">{skill}</span>
                                 )) : <span className="text-xs text-gray-500">No skills listed</span>}
                             </div>
