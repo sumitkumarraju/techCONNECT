@@ -8,10 +8,20 @@ export const PERMISSIONS = {
     ADMIN: ['owner']
 };
 
-export function getProjectRole(project: any, userId: string): string {
+export interface ProjectMemberData {
+    userId: { toString: () => string } | string;
+    role: string;
+}
+
+export interface ProjectData {
+    ownerId: { toString: () => string } | string;
+    members?: ProjectMemberData[];
+}
+
+export function getProjectRole(project: ProjectData, userId: string): string {
     if (project.ownerId.toString() === userId) return 'owner';
 
-    const member = project.members.find((m: any) => m.userId.toString() === userId);
+    const member = project.members?.find((m: ProjectMemberData) => m.userId.toString() === userId);
     return member ? member.role : 'none';
 }
 

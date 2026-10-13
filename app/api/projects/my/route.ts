@@ -29,7 +29,7 @@ export async function GET(req: NextRequest) {
                 { ownerId: userId },
                 { "members.userId": userId }
             ]
-        }).sort({ updatedAt: -1 });
+        }).sort({ updatedAt: -1 }).lean();
 
         return NextResponse.json(projects);
     } catch (error: any) {
