@@ -11,7 +11,7 @@ const getDataFromToken = (req: NextRequest) => {
         if (!token) return null;
         const decoded: any = jwt.verify(token, process.env.JWT_SECRET || 'devsecret');
         return decoded.id;
-    } catch (error: any) {
+    } catch (error: unknown) {
         return null;
     }
 }
@@ -23,8 +23,8 @@ export async function GET(req: NextRequest) {
             .populate("authorId", "name username")
             .sort({ createdAt: -1 });
         return NextResponse.json(posts);
-    } catch (error: any) {
-        return NextResponse.json({ message: error.message }, { status: 500 });
+    } catch (error: unknown) {
+        return NextResponse.json({ message: error instanceof Error ? error.message : "Unknown error" }, { status: 500 });
     }
 }
 
@@ -45,7 +45,7 @@ export async function POST(req: NextRequest) {
         });
 
         return NextResponse.json(post, { status: 201 });
-    } catch (error: any) {
-        return NextResponse.json({ message: error.message }, { status: 500 });
+    } catch (error: unknown) {
+        return NextResponse.json({ message: error instanceof Error ? error.message : "Unknown error" }, { status: 500 });
     }
 }
