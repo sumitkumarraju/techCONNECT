@@ -18,8 +18,26 @@ if (!cached) {
 const MAX_RETRIES = 3;
 const RETRY_DELAY_MS = 2000;
 
+/**
+ * Pauses execution for a specified number of milliseconds.
+ *
+ * @param ms - The number of milliseconds to sleep.
+ * @returns A promise that resolves after the specified delay.
+ */
 const sleep = (ms: number) => new Promise(resolve => setTimeout(resolve, ms));
 
+/**
+ * Connects to the MongoDB database using Mongoose.
+ *
+ * In development, it reuses the connection to prevent connection pooling issues
+ * during Next.js hot module replacement (HMR). Includes a retry mechanism
+ * for robustness in production.
+ *
+ * @param retryCount - The current number of connection attempts (used internally for recursion).
+ * @returns A promise that resolves to the Mongoose instance once connected.
+ * @throws Will throw an error if the connection fails after the maximum number of retries,
+ *         or if the MONGO_URI environment variable is not defined.
+ */
 const connectDB = async (retryCount = 0): Promise<typeof mongoose> => {
     // In dev, prevent hot-reload connections from piling up
     if (process.env.NODE_ENV === 'development' && cached.conn) {

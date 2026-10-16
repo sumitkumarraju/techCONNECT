@@ -5,13 +5,17 @@ import jwt from 'jsonwebtoken';
 
 export const dynamic = 'force-dynamic';
 
+interface JwtPayload {
+    id: string;
+}
+
 const getDataFromToken = (req: NextRequest) => {
     try {
         const token = req.headers.get("Authorization")?.split(" ")[1];
         if (!token) return null;
-        const decoded: any = jwt.verify(token, process.env.JWT_SECRET || 'devsecret');
+        const decoded = jwt.verify(token, process.env.JWT_SECRET || 'devsecret') as JwtPayload;
         return decoded.id;
-    } catch (error: any) {
+    } catch (error: unknown) {
         return null;
     }
 }
@@ -29,7 +33,8 @@ export async function GET(req: NextRequest) {
             return NextResponse.json({ message: "User not found" }, { status: 404 });
         }
         return NextResponse.json(user);
-    } catch (error: any) {
-        return NextResponse.json({ message: error.message }, { status: 500 });
+    } catch (error: unknown) {
+        const message = error instanceof Error ? error.message : 'Unknown error';
+        return NextResponse.json({ message }, { status: 500 });
     }
 }
