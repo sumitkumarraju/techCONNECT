@@ -23,7 +23,8 @@ export async function GET(req: NextRequest) {
 
         const projects = await Project.find(query)
             .populate("ownerId", "name username")
-            .sort({ createdAt: -1 });
+            .sort({ createdAt: -1 })
+            .lean();
 
         return NextResponse.json(projects);
     } catch (error: any) {

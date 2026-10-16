@@ -15,7 +15,7 @@ const getDataFromToken = (req: NextRequest) => {
     try {
         const token = req.headers.get("Authorization")?.split(" ")[1];
         if (!token) return null;
-        const decoded: any = jwt.verify(token, process.env.JWT_SECRET || 'devsecret');
+        const decoded = jwt.verify(token, process.env.JWT_SECRET || 'devsecret') as jwt.JwtPayload;
         return decoded.id;
     } catch (error: any) {
         return null;
@@ -82,7 +82,7 @@ export async function POST(req: NextRequest) {
                     try {
                         const input = ${test.input}; 
                         const output = solution(input);
-                        console.log(JSON.stringify(output));
+                        process.stdout.write(JSON.stringify(output) + '\\n');
                     } catch(e) {
                         console.error(e.message);
                         process.exit(1);

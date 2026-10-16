@@ -7,9 +7,18 @@ import { useAuth } from "@/context/AuthContext";
 import { useRouter } from "next/navigation";
 import { motion } from "framer-motion";
 
+interface Project {
+  _id: string;
+  name: string;
+  description: string;
+  roomCode?: string;
+  isPublic: boolean;
+  members: any[];
+}
+
 export default function Dashboard() {
   const { user, loading, logout } = useAuth();
-  const [projects, setProjects] = useState<any[]>([]);
+  const [projects, setProjects] = useState<Project[]>([]);
   const [showNewProjectModal, setShowNewProjectModal] = useState(false);
   const [showJoinModal, setShowJoinModal] = useState(false);
   const [newProjectName, setNewProjectName] = useState("");
@@ -170,7 +179,7 @@ export default function Dashboard() {
                 </div>
               </div>
             ) : (
-              projects.map((p: any) => (
+              projects.map((p) => (
                 <Link
                   href={`/projects/${p._id}`}
                   key={p._id}
