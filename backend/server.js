@@ -72,12 +72,12 @@ io.use((socket, next) => {
 const projectUsers = new Map(); // projectId -> [{ socketId, ...user }]
 
 io.on("connection", (socket) => {
-    console.log("✅ User Connected:", socket.id);
+
 
     // Join Project & Presence
     socket.on("user-join", ({ projectId, user }) => {
         socket.join(projectId);
-        console.log(`User ${user?.name || 'Unknown'} joined project: ${projectId}`);
+
 
         if (!projectUsers.has(projectId)) {
             projectUsers.set(projectId, []);
@@ -157,7 +157,7 @@ io.on("connection", (socket) => {
     });
 
     socket.on("disconnect", (reason) => {
-        console.log("❌ User Disconnected:", socket.id, "Reason:", reason);
+
         // Cleanup presence
         for (const [projectId, users] of projectUsers.entries()) {
             const leavingUser = users.find((u) => u.socketId === socket.id);

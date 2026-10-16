@@ -4,6 +4,7 @@ import connectDB from "@/lib/db";
 import Project from "@/models/Project";
 import CodeFile from "@/models/CodeFile";
 import jwt from "jsonwebtoken";
+import { getDataFromToken } from "@/lib/auth";
 
 type EditAction = "update" | "create";
 
@@ -25,16 +26,6 @@ const FORBIDDEN_FILE_PATTERNS = [
     /pnpm-lock\.yaml$/i,
 ];
 
-const getDataFromToken = (req: NextRequest) => {
-    try {
-        const token = req.headers.get("Authorization")?.split(" ")[1];
-        if (!token) return null;
-        const decoded: any = jwt.verify(token, process.env.JWT_SECRET || "devsecret");
-        return decoded.id as string;
-    } catch {
-        return null;
-    }
-};
 
 const extractJson = (text: string) => {
     try {
