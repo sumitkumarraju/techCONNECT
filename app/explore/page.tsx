@@ -5,8 +5,24 @@ import API from "@/lib/api";
 import Link from "next/link";
 import { motion } from "framer-motion";
 
+
+interface UserData {
+    _id: string;
+    username: string;
+}
+
+interface ExploreProjectData {
+    _id: string;
+    name: string;
+    description?: string;
+    techStack?: string[];
+    members?: { userId: UserData | string }[];
+    likes?: string[];
+    createdAt?: string;
+}
+
 export default function Explore() {
-    const [projects, setProjects] = useState([]);
+    const [projects, setProjects] = useState<ExploreProjectData[]>([]);
     const [search, setSearch] = useState("");
     const [loading, setLoading] = useState(true);
 
