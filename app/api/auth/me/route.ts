@@ -9,9 +9,9 @@ const getDataFromToken = (req: NextRequest) => {
     try {
         const token = req.headers.get("Authorization")?.split(" ")[1];
         if (!token) return null;
-        const decoded: any = jwt.verify(token, process.env.JWT_SECRET || 'devsecret');
-        return decoded.id;
-    } catch (error: any) {
+        const decoded = jwt.verify(token, process.env.JWT_SECRET || 'devsecret');
+        return (decoded as jwt.JwtPayload).id;
+    } catch (error: unknown) {
         return null;
     }
 }
@@ -29,7 +29,7 @@ export async function GET(req: NextRequest) {
             return NextResponse.json({ message: "User not found" }, { status: 404 });
         }
         return NextResponse.json(user);
-    } catch (error: any) {
-        return NextResponse.json({ message: error.message }, { status: 500 });
+    } catch (error: unknown) {
+        return NextResponse.json({ message: error instanceof Error ? error.message : "Unknown error" }, { status: 500 });
     }
 }

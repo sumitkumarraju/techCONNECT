@@ -259,12 +259,12 @@ ${projectContext || "// Not provided"}
             appliedEdits,
             audit: { modelUsed, timestamp: new Date().toISOString() },
         });
-    } catch (error: any) {
+    } catch (error: unknown) {
         const providerError =
-            error?.error?.message ||
-            error?.response?.data?.error?.message ||
-            error?.response?.data?.message ||
-            error?.message ||
+            (error as any)?.error?.message ||
+            (error as any)?.response?.data?.error?.message ||
+            (error as any)?.response?.data?.message ||
+            (error as any)?.message ||
             "Unknown provider error";
 
         return NextResponse.json({
