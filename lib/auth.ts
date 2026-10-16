@@ -1,5 +1,5 @@
-import { NextRequest } from "next/server";
-import { jwtVerify } from "jose";
+import { JwtPayload } from "jsonwebtoken";
+import jwt from "jsonwebtoken";
 
 // Shared Permission Logic
 export const PERMISSIONS = {
@@ -18,4 +18,14 @@ export function getProjectRole(project: any, userId: string): string {
 export function hasPermission(role: string, requiredRole: 'VIEW' | 'EDIT' | 'ADMIN'): boolean {
     const allowedRoles = PERMISSIONS[requiredRole];
     return allowedRoles.includes(role);
+}
+
+
+export function verifyToken(token: string): JwtPayload | null {
+    try {
+        const decoded = jwt.verify(token, process.env.JWT_SECRET || 'devsecret');
+        return decoded as JwtPayload;
+    } catch (error) {
+        return null;
+    }
 }
