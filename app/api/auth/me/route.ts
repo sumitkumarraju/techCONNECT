@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import connectDB from '@/lib/db';
 import User from '@/models/User';
 import jwt from 'jsonwebtoken';
+import { handleApiError } from '@/lib/api-error';
 
 export const dynamic = 'force-dynamic';
 
@@ -29,7 +30,7 @@ export async function GET(req: NextRequest) {
             return NextResponse.json({ message: "User not found" }, { status: 404 });
         }
         return NextResponse.json(user);
-    } catch (error: any) {
-        return NextResponse.json({ message: error.message }, { status: 500 });
+    } catch (error) {
+        return handleApiError(error);
     }
 }

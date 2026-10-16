@@ -109,7 +109,6 @@ export async function POST(req: NextRequest) {
         } catch (error: any) {
             finalStatus = "error";
             executionOutput = `Execution Error: ${error.stderr || error.message}`;
-            console.error("Exec error:", error);
         } finally {
             // Cleanup
             if (fs.existsSync(tempFilePath)) fs.unlinkSync(tempFilePath);
