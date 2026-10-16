@@ -1,5 +1,6 @@
 import { NextRequest } from "next/server";
 import { jwtVerify } from "jose";
+import jwt from "jsonwebtoken";
 
 // Shared Permission Logic
 export const PERMISSIONS = {
@@ -18,4 +19,15 @@ export function getProjectRole(project: any, userId: string): string {
 export function hasPermission(role: string, requiredRole: 'VIEW' | 'EDIT' | 'ADMIN'): boolean {
     const allowedRoles = PERMISSIONS[requiredRole];
     return allowedRoles.includes(role);
+}
+
+export const getDataFromToken = (req: NextRequest) => {
+    try {
+        const token = req.headers.get("Authorization")?.split(" ")[1];
+        if (!token) return null;
+        const decoded: any = jwt.verify(token, process.env.JWT_SECRET || 'devsecret');
+        return decoded.id;
+    } catch (error: any) {
+        return null;
+    }
 }
