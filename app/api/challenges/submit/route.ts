@@ -71,16 +71,16 @@ export async function POST(req: NextRequest) {
         try {
             // For each test case, we append a runner script to the user code
             // This is naive but works for simple I/O or function calls
-            // BETTER: User code exports a function, and we require() it. 
+            // BETTER: User code exports a function, and we require() it.
             // LET'S ASSUME: User writes a function solution(input).
 
             for (const test of challenge.testCases) {
                 // Construct runner code
                 const runnerCode = `
                     ${code}
-                    
+
                     try {
-                        const input = ${test.input}; 
+                        const input = ${test.input};
                         const output = solution(input);
                         console.log(JSON.stringify(output));
                     } catch(e) {
