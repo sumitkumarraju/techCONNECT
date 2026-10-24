@@ -8,19 +8,9 @@ import path from "path";
 import util from 'util';
 import jwt from 'jsonwebtoken';
 import { submissionSchema } from "@/lib/validations";
+import { getDataFromToken } from "@/lib/auth-server";
 
 const execPromise = util.promisify(exec);
-
-const getDataFromToken = (req: NextRequest) => {
-    try {
-        const token = req.headers.get("Authorization")?.split(" ")[1];
-        if (!token) return null;
-        const decoded: any = jwt.verify(token, process.env.JWT_SECRET || 'devsecret');
-        return decoded.id;
-    } catch (error: any) {
-        return null;
-    }
-}
 
 export async function POST(req: NextRequest) {
     try {
