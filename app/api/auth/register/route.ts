@@ -4,6 +4,7 @@ import User from '@/models/User';
 import bcrypt from 'bcryptjs';
 import jwt from 'jsonwebtoken';
 import { registerSchema } from '@/lib/validations';
+import { handleApiError } from '@/lib/api-error';
 
 export const dynamic = 'force-dynamic';
 
@@ -68,8 +69,7 @@ export async function POST(req: NextRequest) {
             email: user.email,
             token
         }, { status: 201 });
-    } catch (error: any) {
-        console.error("Register Error:", error);
-        return NextResponse.json({ message: error.message }, { status: 500 });
+    } catch (error: unknown) {
+        return handleApiError(error);
     }
 }

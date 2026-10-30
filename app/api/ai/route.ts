@@ -3,7 +3,7 @@ import OpenAI from "openai";
 import connectDB from "@/lib/db";
 import Project from "@/models/Project";
 import CodeFile from "@/models/CodeFile";
-import jwt from "jsonwebtoken";
+import { getDataFromToken } from "@/lib/auth-server";
 
 type EditAction = "update" | "create";
 
@@ -11,6 +11,18 @@ interface ProposedEdit {
     fileName: string;
     action: EditAction;
     content: string;
+}
+
+interface RawEditItem {
+    fileName?: string;
+    action?: string;
+    content?: string;
+}
+
+interface ProjectMember {
+    userId?: string | { toString: () => string };
+    role?: string;
+    toString?: () => string;
 }
 
 const MAX_PROJECT_FILES_IN_CONTEXT = 30;
@@ -25,17 +37,6 @@ const FORBIDDEN_FILE_PATTERNS = [
     /pnpm-lock\.yaml$/i,
 ];
 
-const getDataFromToken = (req: NextRequest) => {
-    try {
-        const token = req.headers.get("Authorization")?.split(" ")[1];
-        if (!token) return null;
-        const decoded: any = jwt.verify(token, process.env.JWT_SECRET || "devsecret");
-        return decoded.id as string;
-    } catch {
-        return null;
-    }
-};
-
 const extractJson = (text: string) => {
     try {
         return JSON.parse(text);
@@ -49,8 +50,8 @@ const extractJson = (text: string) => {
 const sanitizeEdits = (value: unknown): ProposedEdit[] => {
     if (!Array.isArray(value)) return [];
     const normalized = value
-        .filter((item: any) => item && typeof item === "object")
-        .map((item: any) => ({
+        .filter((item: unknown): item is RawEditItem => !!item && typeof item === "object")
+        .map((item: RawEditItem) => ({
             fileName: String(item.fileName || "").trim(),
             action: item.action === "create" ? "create" as EditAction : "update" as EditAction,
             content: String(item.content || ""),
@@ -115,7 +116,7 @@ export async function POST(req: NextRequest) {
             }
 
             const isOwner = project.ownerId?.toString() === userId;
-            const isMember = project.members?.some((m: any) => {
+            const isMember = project.members?.some((m: ProjectMember) => {
                 if (m?.userId) return m.userId.toString() === userId;
                 return m?.toString?.() === userId;
             });
@@ -126,7 +127,7 @@ export async function POST(req: NextRequest) {
 
             const files = await CodeFile.find({ projectId }).select("name content").limit(MAX_PROJECT_FILES_IN_CONTEXT);
             projectContext = files
-                .map((f: any) => `FILE: ${f.name}\n\`\`\`\n${String(f.content || "").slice(0, MAX_FILE_CHARS)}\n\`\`\``)
+                .map((f: { name: string; content?: string }) => `FILE: ${f.name}\n\`\`\`\n${String(f.content || "").slice(0, MAX_FILE_CHARS)}\n\`\`\``)
                 .join("\n\n");
         }
 
@@ -171,9 +172,9 @@ ${projectContext || "// Not provided"}
             .filter(Boolean);
         const modelCandidates = [selectedModel, ...fallbackModels];
 
-        let completion: any = null;
+        let completion: OpenAI.Chat.Completions.ChatCompletion | null = null;
         let modelUsed = selectedModel;
-        let completionError: any = null;
+        let completionError: unknown = null;
         for (const candidate of modelCandidates) {
             try {
                 completion = await openai.chat.completions.create({
@@ -190,7 +191,7 @@ ${projectContext || "// Not provided"}
                 modelUsed = candidate;
                 completionError = null;
                 break;
-            } catch (err) {
+            } catch (err: unknown) {
                 completionError = err;
             }
         }
@@ -218,7 +219,7 @@ ${projectContext || "// Not provided"}
         }
 
         const isOwner = project.ownerId?.toString() === userId;
-        const memberEntry = project.members?.find((m: any) => {
+        const memberEntry = project.members?.find((m: ProjectMember) => {
             if (m?.userId) return m.userId.toString() === userId;
             return m?.toString?.() === userId;
         });
@@ -259,12 +260,14 @@ ${projectContext || "// Not provided"}
             appliedEdits,
             audit: { modelUsed, timestamp: new Date().toISOString() },
         });
-    } catch (error: any) {
+    } catch (error: unknown) {
+
+        const anyError = error as any;
         const providerError =
-            error?.error?.message ||
-            error?.response?.data?.error?.message ||
-            error?.response?.data?.message ||
-            error?.message ||
+            anyError?.error?.message ||
+            anyError?.response?.data?.error?.message ||
+            anyError?.response?.data?.message ||
+            anyError?.message ||
             "Unknown provider error";
 
         return NextResponse.json({
