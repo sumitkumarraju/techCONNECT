@@ -36,7 +36,7 @@ export async function POST(req: NextRequest) {
 
         const userExists = await User.findOne({
             $or: [{ email: normalizedEmail }, { username: normalizedUsername }]
-        });
+        }).select('email username').lean() as { email: string; username: string } | null;
 
         if (userExists) {
             const duplicateField =
