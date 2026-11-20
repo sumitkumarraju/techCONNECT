@@ -1,6 +1,7 @@
 "use client";
 import React from "react";
 import Link from "next/link";
+import Image from "next/image";
 import { motion } from "framer-motion";
 
 export default function Home() {
@@ -290,8 +291,7 @@ export default function Home() {
 
           {/* Center Octopus */}
           <div className="md:col-span-6 flex justify-center py-10 md:py-0">
-            {/* eslint-disable-next-line @next/next/no-img-element */}
-            <img src="https://jules.google/squid.png" alt="Octopus" className="w-[280px] md:w-[400px] animate-[pulse_4s_ease-in-out_infinite]" />
+            <Image src="https://jules.google/squid.png" width={400} height={400} alt="Octopus" className="w-[280px] md:w-[400px] animate-[pulse_4s_ease-in-out_infinite]" />
           </div>
 
           {/* Right Column Features */}

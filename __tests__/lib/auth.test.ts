@@ -6,7 +6,8 @@ describe('Auth Library', () => {
             ownerId: 'owner-id',
             members: [
                 { userId: 'editor-id', role: 'editor' },
-                { userId: 'viewer-id', role: 'viewer' }
+                { userId: 'viewer-id', role: 'viewer' },
+                { userId: 'another-member-id', role: 'member' }
             ]
         };
 

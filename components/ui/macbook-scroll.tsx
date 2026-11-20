@@ -1,4 +1,5 @@
 import React, { useEffect, useRef, useState } from "react";
+import Image from "next/image";
 import { motion, useScroll, useTransform, MotionValue } from "framer-motion";
 import { cn } from "@/lib/utils";
 import {
@@ -166,10 +167,11 @@ export const Lid = ({
         <div className="absolute inset-0 bg-[#272729] rounded-lg" />
 
         {src && (
-          /* eslint-disable-next-line @next/next/no-img-element */
-          <img
+          <Image
             src={src}
             alt="macbook"
+            width={512}
+            height={192}
             className="object-cover object-left-top absolute inset-0 bg-[#010101] rounded-lg w-full h-full"
           />
         )}
