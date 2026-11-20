@@ -3,17 +3,7 @@ import dbConnect from "@/lib/db";
 import Discussion from "@/models/Discussion";
 import jwt from 'jsonwebtoken';
 import { discussionSchema } from "@/lib/validations";
-
-const getDataFromToken = (req: NextRequest) => {
-    try {
-        const token = req.headers.get("Authorization")?.split(" ")[1];
-        if (!token) return null;
-        const decoded: any = jwt.verify(token, process.env.JWT_SECRET || 'devsecret');
-        return decoded.id;
-    } catch (error: any) {
-        return null;
-    }
-}
+import { getDataFromToken } from "@/lib/auth-server";
 
 // GET: List discussions
 export async function GET(req: Request) {

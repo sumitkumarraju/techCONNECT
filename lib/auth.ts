@@ -1,17 +1,25 @@
-import { NextRequest } from "next/server";
-import { jwtVerify } from "jose";
-
 // Shared Permission Logic
+
+export interface AuthProjectMember {
+    userId: string | { toString: () => string };
+    role: string;
+}
+
+export interface AuthProject {
+    ownerId: string | { toString: () => string };
+    members: AuthProjectMember[];
+}
+
 export const PERMISSIONS = {
     VIEW: ['owner', 'editor', 'viewer'],
     EDIT: ['owner', 'editor'],
     ADMIN: ['owner']
 };
 
-export function getProjectRole(project: any, userId: string): string {
+export function getProjectRole(project: AuthProject, userId: string): string {
     if (project.ownerId.toString() === userId) return 'owner';
 
-    const member = project.members.find((m: any) => m.userId.toString() === userId);
+    const member = project.members.find((m: AuthProjectMember) => m.userId.toString() === userId);
     return member ? member.role : 'none';
 }
 
